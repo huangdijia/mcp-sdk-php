@@ -1,0 +1,20 @@
+includes:
+  # - vendor/tw591pk/hyperf-phpstan/extension.neon
+
+parameters:
+  level: 6
+  parallel:
+    jobSize: 20
+    maximumNumberOfProcesses: 32
+    minimumNumberOfJobsPerProcess: 2
+  reportUnmatchedIgnoredErrors: false
+  paths:
+    - app/
+    - config/
+    - storage/languages
+  excludePaths:
+  ignoreErrors:
+    -
+      identifier: missingType.iterableValue
+    -
+      identifier: missingType.generics

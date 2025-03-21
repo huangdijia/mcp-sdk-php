@@ -1,0 +1,14 @@
+/vendor/
+/composer.lock
+/.phpunit.cache/
+/.php-cs-fixer.cache
+/.idea/
+/.vscode/
+/coverage/
+/build/
+/docs/
+/.DS_Store
+/node_modules/
+/npm-debug.log
+/yarn-error.log
+/typescript-sdk
