@@ -250,7 +250,7 @@ while (true) {
     if ($line !== false && trim($line) !== '') {
         // 将消息传递给transport的onMessage回调处理
         $trimmedLine = trim($line);
-        $transport->handleMessage($trimmedLine);
+        $server->handleMessage($trimmedLine);
     }
 
     // 休眠以避免高 CPU 使用率

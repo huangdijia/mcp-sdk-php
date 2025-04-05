@@ -565,24 +565,4 @@ class McpServer extends Server
 
         return $capabilities;
     }
-
-    /**
-     * Get the capabilities of this server.
-     * This is a helper method to access the capabilities from the parent class.
-     *
-     * @return array the capabilities
-     */
-    protected function getCapabilities(): array
-    {
-        // 返回一个基本能力集合
-        // 在理想情况下，我们应该能够访问父类的 $capabilities 属性
-        // 但由于它是私有的，我们需要提供一个基本实现
-        return [
-            'resources' => [
-                'subscribe' => false,
-            ],
-            'tools' => [],
-            'prompts' => [],
-        ];
-    }
 }

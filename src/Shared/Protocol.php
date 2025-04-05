@@ -405,6 +405,7 @@ abstract class Protocol
 
             $this->sendResponse($id, $result);
         } catch (Throwable $e) {
+            var_dump($e);
             $errorCode = $e instanceof McpError ? $e->getCode() : Types::ERROR_CODE['InternalError'];
             $this->sendErrorResponse($id, $e->getMessage(), $errorCode);
         }
@@ -472,10 +473,10 @@ abstract class Protocol
     /**
      * Send a response to a request.
      *
-     * @param string $id the request ID
+     * @param int $id the request ID
      * @param array $result the result data
      */
-    protected function sendResponse(string $id, array $result): void
+    protected function sendResponse(int $id, array $result): void
     {
         if (! $this->transport) {
             $this->logger->error('Cannot send response: transport not connected');

@@ -141,7 +141,7 @@ class StdioServerTransport implements Transport
 
     /**
      * Handle an incoming message manually.
-     * 
+     *
      * @param string $message the message to handle
      */
     public function handleMessage(string $message): void
