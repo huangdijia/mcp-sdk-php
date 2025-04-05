@@ -52,6 +52,27 @@ class McpServer extends Server
     private array $promptDefinitions = [];
 
     /**
+     * 服务器初始化完成后的回调
+     * 
+     * @var callable|null
+     */
+    public $onInitialized;
+
+    /**
+     * 收到请求时的回调
+     * 
+     * @var callable|null
+     */
+    public $onRequest;
+
+    /**
+     * 请求处理完成后的回调
+     * 
+     * @var callable|null
+     */
+    public $onResponse;
+
+    /**
      * Constructor.
      *
      * @param array $serverInfo server name and version information
