@@ -116,6 +116,8 @@ class McpServer extends Server
             ],
         ], $definition);
 
+        $this->capabilities['tools'] ??= new \stdClass();
+
         return $this;
     }
 
@@ -131,6 +133,8 @@ class McpServer extends Server
     {
         $this->resourceHandlers[$scheme] = $handler;
         $this->resourceTemplates[$scheme] = $template;
+
+        $this->capabilities['resources'] ??= new \stdClass();
 
         return $this;
     }
@@ -153,6 +157,8 @@ class McpServer extends Server
             'description' => '',
             'arguments' => [],
         ], $definition);
+
+        $this->capabilities['prompts'] ??= new \stdClass();
 
         return $this;
     }

@@ -41,7 +41,7 @@ class Server extends Protocol
     /**
      * @var array server capabilities
      */
-    private array $capabilities;
+    protected array $capabilities;
 
     /**
      * @var string|null server instructions
