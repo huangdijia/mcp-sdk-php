@@ -6,7 +6,7 @@ declare(strict_types=1);
  *
  * @link     https://github.com/huangdijia/mcp-php-sdk
  * @document https://github.com/huangdijia/mcp-php-sdk/blob/main/README.md
- * @contact  Your name <your-mail@gmail.com>
+ * @contact  Deeka Wong <huangdijia@gmail.com>
  */
 use Huangdijia\PhpCsFixer\Config;
 use PhpCsFixer\Runner\Parallel\ParallelConfig;
@@ -20,7 +20,7 @@ return (new Config())
         projectLink: 'https://github.com/huangdijia/mcp-php-sdk',
         projectDocument: 'https://github.com/huangdijia/mcp-php-sdk/blob/main/README.md',
         contacts: [
-            'Your name' => 'your-mail@gmail.com',
+            'Deeka Wong' => 'huangdijia@gmail.com',
         ],
     )
     ->setFinder(

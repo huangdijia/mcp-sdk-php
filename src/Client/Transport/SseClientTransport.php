@@ -6,7 +6,7 @@ declare(strict_types=1);
  *
  * @link     https://github.com/huangdijia/mcp-php-sdk
  * @document https://github.com/huangdijia/mcp-php-sdk/blob/main/README.md
- * @contact  Your name <your-mail@gmail.com>
+ * @contact  Deeka Wong <huangdijia@gmail.com>
  */
 
 namespace ModelContextProtocol\SDK\Client\Transport;
