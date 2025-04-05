@@ -22,6 +22,27 @@ use Throwable;
 class McpServer extends Server
 {
     /**
+     * 服务器初始化完成后的回调.
+     *
+     * @var callable|null
+     */
+    public $onInitialized;
+
+    /**
+     * 收到请求时的回调.
+     *
+     * @var callable|null
+     */
+    public $onRequest;
+
+    /**
+     * 请求处理完成后的回调.
+     *
+     * @var callable|null
+     */
+    public $onResponse;
+
+    /**
      * @var array<string, callable> tool handlers by name
      */
     private array $toolHandlers = [];
@@ -50,27 +71,6 @@ class McpServer extends Server
      * @var array<string, array> prompt definitions by name
      */
     private array $promptDefinitions = [];
-
-    /**
-     * 服务器初始化完成后的回调
-     * 
-     * @var callable|null
-     */
-    public $onInitialized;
-
-    /**
-     * 收到请求时的回调
-     * 
-     * @var callable|null
-     */
-    public $onRequest;
-
-    /**
-     * 请求处理完成后的回调
-     * 
-     * @var callable|null
-     */
-    public $onResponse;
 
     /**
      * Constructor.

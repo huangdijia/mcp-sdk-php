@@ -13,11 +13,10 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use ModelContextProtocol\SDK\Server\McpServer;
 use ModelContextProtocol\SDK\Server\Transport\StdioServerTransport;
 use ModelContextProtocol\SDK\Shared\ResourceTemplate;
-use ModelContextProtocol\SDK\Types;
 
 /**
- * MCP Server 示例
- * 
+ * MCP Server 示例.
+ *
  * 这个例子展示了如何创建一个简单的 MCP 服务器，实现:
  * - 多种工具函数
  * - 不同类型的资源
@@ -34,23 +33,23 @@ $serverConfig = [
 // 创建 MCP 服务器实例
 $server = new McpServer($serverConfig);
 
-/**
+/*
  * 工具示例部分
  */
 
 // 添加基础计算工具
 $server->tool('add', function (array $params) {
     try {
-        $a = is_numeric($params['a'] ?? null) ? (float)$params['a'] : 0;
-        $b = is_numeric($params['b'] ?? null) ? (float)$params['b'] : 0;
+        $a = is_numeric($params['a'] ?? null) ? (float) $params['a'] : 0;
+        $b = is_numeric($params['b'] ?? null) ? (float) $params['b'] : 0;
         $result = $a + $b;
-        
+
         return [
             'content' => [
-                ['type' => 'text', 'text' => (string)$result],
+                ['type' => 'text', 'text' => (string) $result],
             ],
         ];
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         return [
             'content' => [
                 ['type' => 'text', 'text' => '计算错误: ' . $e->getMessage()],
@@ -68,16 +67,16 @@ $server->tool('add', function (array $params) {
 // 添加乘法工具
 $server->tool('multiply', function (array $params) {
     try {
-        $a = is_numeric($params['a'] ?? null) ? (float)$params['a'] : 0;
-        $b = is_numeric($params['b'] ?? null) ? (float)$params['b'] : 0;
+        $a = is_numeric($params['a'] ?? null) ? (float) $params['a'] : 0;
+        $b = is_numeric($params['b'] ?? null) ? (float) $params['b'] : 0;
         $result = $a * $b;
-        
+
         return [
             'content' => [
-                ['type' => 'text', 'text' => (string)$result],
+                ['type' => 'text', 'text' => (string) $result],
             ],
         ];
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         return [
             'content' => [
                 ['type' => 'text', 'text' => '计算错误: ' . $e->getMessage()],
@@ -96,7 +95,7 @@ $server->tool('multiply', function (array $params) {
 $server->tool('textProcess', function (array $params) {
     $text = $params['text'] ?? '';
     $operation = $params['operation'] ?? 'none';
-    
+
     switch ($operation) {
         case 'uppercase':
             $result = strtoupper($text);
@@ -113,7 +112,7 @@ $server->tool('textProcess', function (array $params) {
         default:
             $result = $text;
     }
-    
+
     return [
         'content' => [
             ['type' => 'text', 'text' => $result],
@@ -131,7 +130,7 @@ $server->tool('textProcess', function (array $params) {
     ],
 ]);
 
-/**
+/*
  * 资源示例部分
  */
 
@@ -141,7 +140,7 @@ $server->resource(
     new ResourceTemplate('greeting://{name}', ['list' => null]),
     function (string $uri, array $params) {
         $name = $params['name'] ?? '访客';
-        
+
         return [
             'contents' => [[
                 'uri' => $uri,
@@ -158,17 +157,17 @@ $server->resource(
     function (string $uri, array $params) {
         $timezone = $params['timezone'] ?? 'Asia/Shanghai';
         $format = $params['format'] ?? 'Y-m-d H:i:s';
-        
+
         try {
-            $dateTime = new \DateTime('now', new \DateTimeZone($timezone));
-            
+            $dateTime = new DateTime('now', new DateTimeZone($timezone));
+
             return [
                 'contents' => [[
                     'uri' => $uri,
                     'text' => '当前时间: ' . $dateTime->format($format),
                 ]],
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return [
                 'contents' => [[
                     'uri' => $uri,
@@ -184,15 +183,15 @@ $server->resource(
     'random',
     new ResourceTemplate('random://{min}/{max}', ['list' => null]),
     function (string $uri, array $params) {
-        $min = isset($params['min']) && is_numeric($params['min']) ? (int)$params['min'] : 1;
-        $max = isset($params['max']) && is_numeric($params['max']) ? (int)$params['max'] : 100;
-        
+        $min = isset($params['min']) && is_numeric($params['min']) ? (int) $params['min'] : 1;
+        $max = isset($params['max']) && is_numeric($params['max']) ? (int) $params['max'] : 100;
+
         if ($min > $max) {
             [$min, $max] = [$max, $min];
         }
-        
+
         $random = rand($min, $max);
-        
+
         return [
             'contents' => [[
                 'uri' => $uri,
@@ -202,14 +201,14 @@ $server->resource(
     }
 );
 
-/**
+/*
  * 事件处理部分
  */
 
 // 设置服务器初始化完成的回调
 $server->onInitialized = function () use ($serverConfig) {
     echo "服务器 \"{$serverConfig['name']}\" v{$serverConfig['version']} 已初始化并准备接收请求\n";
-    echo "启动时间: " . date('Y-m-d H:i:s') . "\n";
+    echo '启动时间: ' . date('Y-m-d H:i:s') . "\n";
     echo "------------------------------------------------------\n";
 };
 
@@ -224,7 +223,7 @@ $server->onResponse = function (string $requestId, string $method) {
     echo "------------------------------------------------------\n";
 };
 
-/**
+/*
  * 启动服务器
  */
 echo "正在启动 MCP 服务器...\n";
