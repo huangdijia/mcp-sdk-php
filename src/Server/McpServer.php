@@ -520,26 +520,25 @@ class McpServer extends Server
      */
     public function getServerCapabilities(): array
     {
-        // 使用直接访问父类的 capabilities 属性的方法，而不是调用不存在的 getCapabilities() 方法
-        // 这需要在父类 Server 中将 $capabilities 属性改为 protected
-        // 临时解决方案是创建一个基本的空能力集合
-        $capabilities = []; // 创建基本能力集合而不是调用不存在的方法
+        // 初始化一个包含所有可能使用的键的基本能力结构
+        $capabilities = [
+            'resources' => [],
+            'tools' => [],
+            'prompts' => [],
+        ];
 
         // 添加资源能力（如果已定义资源）
         if (! empty($this->resourceTemplates)) {
-            $capabilities['resources'] = $capabilities['resources'] ?? [];
             $capabilities['resources']['listChanged'] = true;
         }
 
         // 添加工具能力（如果已定义工具）
         if (! empty($this->toolDefinitions)) {
-            $capabilities['tools'] = $capabilities['tools'] ?? [];
             $capabilities['tools']['listChanged'] = true;
         }
 
         // 添加提示词能力（如果已定义提示词）
         if (! empty($this->promptDefinitions)) {
-            $capabilities['prompts'] = $capabilities['prompts'] ?? [];
             $capabilities['prompts']['listChanged'] = true;
         }
 
