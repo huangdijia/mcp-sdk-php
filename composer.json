@@ -1,6 +1,6 @@
 {
     "name": "huangdijia/mcp-sdk-php",
-    "description": "Model Context Protocol implementation for PHP",
+    "description": "Model Context Protocol SDK for PHP",
     "type": "library",
     "license": "MIT",
     "authors": [

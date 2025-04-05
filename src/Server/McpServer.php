@@ -145,7 +145,6 @@ class McpServer extends Server
      *
      * @param string $name the prompt name
      * @param callable $handler the prompt handler function
-     * @param array $definition prompt definition (including description and arguments)
      * @return self for chaining
      */
     public function prompt(string $name, callable $handler, string $description = '', array $arguments = []): self
