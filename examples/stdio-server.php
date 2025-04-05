@@ -234,8 +234,25 @@ $transport = new StdioServerTransport();
 // 连接服务器与传输层
 $server->connect($transport);
 
+// 手动处理 StdioServerTransport
+// 修复问题: 由于 StdioServerTransport 的 startReading 方法在原实现中会阻塞主线程，
+// 但在某些环境下可能无法正确处理来自 stdin 的消息
+// 这里我们手动实现消息处理循环
+$input = STDIN;
+stream_set_blocking($input, false);
+
 // 保持运行直到传输层关闭
 while (true) {
+    // 读取输入
+    $line = fgets($input);
+    if ($line !== false && trim($line) !== '') {
+        // 我们不应该尝试直接访问transport的onMessage属性，因为它是私有的
+        // 相反，我们可以通过Protocol类的handleMessage方法来处理消息
+        // 该方法会在内部调用已注册的onMessage回调
+        $trimmedLine = trim($line);
+        $server->handleMessage($trimmedLine);
+    }
+
     // 休眠以避免高 CPU 使用率
-    usleep(100000); // 100ms
+    usleep(10000); // 10ms
 }

@@ -37,17 +37,17 @@ class StdioServerTransport implements Transport
     /**
      * @var callable|null callback for when a message is received
      */
-    private $onmessage;
+    private $onMessage;
 
     /**
      * @var callable|null callback for when the connection is closed
      */
-    private $onclose;
+    private $onClose;
 
     /**
      * @var callable|null callback for when an error occurs
      */
-    private $onerror;
+    private $onError;
 
     /**
      * Constructor.
@@ -83,8 +83,8 @@ class StdioServerTransport implements Transport
     {
         $this->active = false;
 
-        if ($this->onclose) {
-            call_user_func($this->onclose);
+        if ($this->onClose) {
+            call_user_func($this->onClose);
         }
     }
 
@@ -95,7 +95,7 @@ class StdioServerTransport implements Transport
      */
     public function setOnMessage(callable $callback): void
     {
-        $this->onmessage = $callback;
+        $this->onMessage = $callback;
     }
 
     /**
@@ -105,7 +105,7 @@ class StdioServerTransport implements Transport
      */
     public function setOnClose(callable $callback): void
     {
-        $this->onclose = $callback;
+        $this->onClose = $callback;
     }
 
     /**
@@ -115,7 +115,7 @@ class StdioServerTransport implements Transport
      */
     public function setOnError(callable $callback): void
     {
-        $this->onerror = $callback;
+        $this->onError = $callback;
     }
 
     /**
@@ -125,8 +125,8 @@ class StdioServerTransport implements Transport
      */
     public function handleError(Throwable $error): void
     {
-        if ($this->onerror) {
-            call_user_func($this->onerror, $error);
+        if ($this->onError) {
+            call_user_func($this->onError, $error);
         }
     }
 
@@ -143,8 +143,8 @@ class StdioServerTransport implements Transport
             $line = fgets($this->input);
             if ($line !== false) {
                 $line = trim($line);
-                if ($line && $this->onmessage) {
-                    call_user_func($this->onmessage, $line);
+                if ($line && $this->onMessage) {
+                    call_user_func($this->onMessage, $line);
                 }
             }
 
