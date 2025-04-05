@@ -27,12 +27,12 @@ class McpServer extends Server
     private array $toolHandlers = [];
 
     /**
-     * @var array<string, array> tool schemas by name
+     * @var array<string, array> tool definitions by name
      */
-    private array $toolSchemas = [];
+    private array $toolDefinitions = [];
 
     /**
-     * @var array<string, array> resource handlers by scheme
+     * @var array<string, callable> resource handlers by scheme
      */
     private array $resourceHandlers = [];
 
@@ -42,14 +42,14 @@ class McpServer extends Server
     private array $resourceTemplates = [];
 
     /**
-     * @var array<string, array> prompt handlers by name
+     * @var array<string, callable> prompt handlers by name
      */
     private array $promptHandlers = [];
 
     /**
-     * @var array<string, array> prompt schemas by name
+     * @var array<string, array> prompt definitions by name
      */
-    private array $promptSchemas = [];
+    private array $promptDefinitions = [];
 
     /**
      * Constructor.
@@ -62,12 +62,15 @@ class McpServer extends Server
         parent::__construct($serverInfo, $options);
 
         // Set up handlers for core MCP methods
-        $this->setRequestHandler('callTool', [$this, 'handleCallTool']);
-        $this->setRequestHandler('listTools', [$this, 'handleListTools']);
-        $this->setRequestHandler('listResources', [$this, 'handleListResources']);
-        $this->setRequestHandler('readResource', [$this, 'handleReadResource']);
-        $this->setRequestHandler('listPrompts', [$this, 'handleListPrompts']);
-        $this->setRequestHandler('getPrompt', [$this, 'handleGetPrompt']);
+        $this->setRequestHandler(Types::METHOD['CallTool'], [$this, 'handleCallTool']);
+        $this->setRequestHandler(Types::METHOD['ListTools'], [$this, 'handleListTools']);
+        $this->setRequestHandler(Types::METHOD['ListResources'], [$this, 'handleListResources']);
+        $this->setRequestHandler(Types::METHOD['ListResourceTemplates'], [$this, 'handleListResourceTemplates']);
+        $this->setRequestHandler(Types::METHOD['ReadResource'], [$this, 'handleReadResource']);
+        $this->setRequestHandler(Types::METHOD['ListPrompts'], [$this, 'handleListPrompts']);
+        $this->setRequestHandler(Types::METHOD['GetPrompt'], [$this, 'handleGetPrompt']);
+        $this->setRequestHandler(Types::METHOD['Subscribe'], [$this, 'handleSubscribe']);
+        $this->setRequestHandler(Types::METHOD['Unsubscribe'], [$this, 'handleUnsubscribe']);
     }
 
     /**
@@ -75,12 +78,22 @@ class McpServer extends Server
      *
      * @param string $name the tool name
      * @param callable $handler the tool handler function
-     * @param array $schema optional JSON schema for the tool parameters
+     * @param array $definition the tool definition (including description and inputSchema)
+     * @return self for chaining
      */
-    public function tool(string $name, callable $handler, array $schema = []): self
+    public function tool(string $name, callable $handler, array $definition = []): self
     {
         $this->toolHandlers[$name] = $handler;
-        $this->toolSchemas[$name] = $schema;
+
+        // Ensure the tool definition has required properties
+        $this->toolDefinitions[$name] = array_merge([
+            'name' => $name,
+            'description' => '',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => [],
+            ],
+        ], $definition);
 
         return $this;
     }
@@ -91,6 +104,7 @@ class McpServer extends Server
      * @param string $scheme the resource scheme
      * @param ResourceTemplate $template the resource template
      * @param callable $handler the resource handler function
+     * @return self for chaining
      */
     public function resource(string $scheme, ResourceTemplate $template, callable $handler): self
     {
@@ -104,19 +118,26 @@ class McpServer extends Server
      * Register a prompt with the server.
      *
      * @param string $name the prompt name
-     * @param array $prompt the prompt definition
-     * @param array $schema optional JSON schema for the prompt parameters
+     * @param callable $handler the prompt handler function
+     * @param array $definition prompt definition (including description and arguments)
+     * @return self for chaining
      */
-    public function prompt(string $name, array $prompt, array $schema = []): self
+    public function prompt(string $name, callable $handler, array $definition = []): self
     {
-        $this->promptHandlers[$name] = $prompt;
-        $this->promptSchemas[$name] = $schema;
+        $this->promptHandlers[$name] = $handler;
+
+        // Ensure the prompt definition has required properties
+        $this->promptDefinitions[$name] = array_merge([
+            'name' => $name,
+            'description' => '',
+            'arguments' => [],
+        ], $definition);
 
         return $this;
     }
 
     /**
-     * Handle a callTool request.
+     * Handle a tools/call request.
      *
      * @param array $params the request parameters
      * @return array the tool result
@@ -137,18 +158,56 @@ class McpServer extends Server
             throw new McpError("Tool not found: {$name}", Types::ERROR_CODE['InvalidParams']);
         }
 
-        $toolParams = $params['params'] ?? [];
+        $arguments = $params['arguments'] ?? [];
         $handler = $this->toolHandlers[$name];
 
         try {
-            return $handler($toolParams);
+            $result = $handler($arguments);
+
+            // Support for protocol version 2024-11-05+
+            if (! isset($result['content'])) {
+                // Convert legacy result format to new content format
+                if (isset($result['toolResult'])) {
+                    return [
+                        'content' => [
+                            [
+                                'type' => 'text',
+                                'text' => is_string($result['toolResult'])
+                                    ? $result['toolResult']
+                                    : json_encode($result['toolResult']),
+                            ],
+                        ],
+                    ];
+                }
+
+                // If no content is returned, create default response
+                return [
+                    'content' => [
+                        [
+                            'type' => 'text',
+                            'text' => 'Tool execution completed successfully.',
+                        ],
+                    ],
+                ];
+            }
+
+            return $result;
         } catch (Throwable $e) {
-            throw new McpError("Tool execution failed: {$e->getMessage()}", Types::ERROR_CODE['InternalError']);
+            // Return error in content format
+            return [
+                'content' => [
+                    [
+                        'type' => 'text',
+                        'text' => "Error: {$e->getMessage()}",
+                    ],
+                ],
+                'isError' => true,
+            ];
         }
     }
 
     /**
-     * Handle a listTools request.
+     * Handle a tools/list request.
      *
      * @param array $params the request parameters
      * @return array the list of tools
@@ -161,18 +220,15 @@ class McpServer extends Server
         }
 
         $tools = [];
-        foreach ($this->toolHandlers as $name => $handler) {
-            $tools[] = [
-                'name' => $name,
-                'schema' => $this->toolSchemas[$name] ?? null,
-            ];
+        foreach ($this->toolDefinitions as $name => $definition) {
+            $tools[] = $definition;
         }
 
         return ['tools' => $tools];
     }
 
     /**
-     * Handle a listResources request.
+     * Handle a resources/list request.
      *
      * @param array $params the request parameters
      * @return array the list of resources
@@ -185,20 +241,59 @@ class McpServer extends Server
         }
 
         $resources = [];
+        $cursor = $params['cursor'] ?? null;
+
         foreach ($this->resourceTemplates as $scheme => $template) {
-            if ($template->canList()) {
+            if ($template->listable) {
+                $uri = $template->getExampleUri();
                 $resources[] = [
-                    'scheme' => $scheme,
-                    'template' => $template->getTemplate(),
+                    'uri' => $uri,
+                    'name' => $template->name,
+                    'description' => $template->description,
+                    'mimeType' => $template->mimeType,
                 ];
             }
         }
 
-        return ['resources' => $resources];
+        return [
+            'resources' => $resources,
+            'nextCursor' => null, // Implement pagination if needed
+        ];
     }
 
     /**
-     * Handle a readResource request.
+     * Handle a resources/templates/list request.
+     *
+     * @param array $params the request parameters
+     * @return array the list of resource templates
+     * @throws McpError if the request fails
+     */
+    public function handleListResourceTemplates(array $params): array
+    {
+        if (! $this->initialized) {
+            throw new McpError('Server not initialized', Types::ERROR_CODE['ServerNotInitialized']);
+        }
+
+        $templates = [];
+        $cursor = $params['cursor'] ?? null;
+
+        foreach ($this->resourceTemplates as $scheme => $template) {
+            $templates[] = [
+                'uriTemplate' => $template->getUriTemplate(),
+                'name' => $template->name,
+                'description' => $template->description,
+                'mimeType' => $template->mimeType,
+            ];
+        }
+
+        return [
+            'resourceTemplates' => $templates,
+            'nextCursor' => null, // Implement pagination if needed
+        ];
+    }
+
+    /**
+     * Handle a resources/read request.
      *
      * @param array $params the request parameters
      * @return array the resource content
@@ -215,7 +310,7 @@ class McpServer extends Server
             throw new McpError('Resource URI is required', Types::ERROR_CODE['InvalidParams']);
         }
 
-        // Parse the URI to get the scheme and parameters
+        // Parse the URI to get the scheme
         $parsedUrl = parse_url($uri);
         $scheme = $parsedUrl['scheme'] ?? null;
 
@@ -226,18 +321,23 @@ class McpServer extends Server
         $template = $this->resourceTemplates[$scheme];
         $handler = $this->resourceHandlers[$scheme];
 
-        // Extract parameters from the URI using the template
-        $params = $template->extractParams($uri);
-
         try {
-            return $handler($uri, $params);
+            $params = $template->extractParams($uri);
+            $content = $handler($uri, $params);
+
+            // Ensure content is properly formatted
+            if (! isset($content['contents']) || ! is_array($content['contents'])) {
+                throw new McpError('Invalid resource content format', Types::ERROR_CODE['InternalError']);
+            }
+
+            return $content;
         } catch (Throwable $e) {
             throw new McpError("Resource read failed: {$e->getMessage()}", Types::ERROR_CODE['InternalError']);
         }
     }
 
     /**
-     * Handle a listPrompts request.
+     * Handle a prompts/list request.
      *
      * @param array $params the request parameters
      * @return array the list of prompts
@@ -250,18 +350,20 @@ class McpServer extends Server
         }
 
         $prompts = [];
-        foreach ($this->promptHandlers as $name => $prompt) {
-            $prompts[] = [
-                'name' => $name,
-                'schema' => $this->promptSchemas[$name] ?? null,
-            ];
+        $cursor = $params['cursor'] ?? null;
+
+        foreach ($this->promptDefinitions as $name => $definition) {
+            $prompts[] = $definition;
         }
 
-        return ['prompts' => $prompts];
+        return [
+            'prompts' => $prompts,
+            'nextCursor' => null, // Implement pagination if needed
+        ];
     }
 
     /**
-     * Handle a getPrompt request.
+     * Handle a prompts/get request.
      *
      * @param array $params the request parameters
      * @return array the prompt definition
@@ -282,9 +384,162 @@ class McpServer extends Server
             throw new McpError("Prompt not found: {$name}", Types::ERROR_CODE['InvalidParams']);
         }
 
-        return [
-            'prompt' => $this->promptHandlers[$name],
-            'schema' => $this->promptSchemas[$name] ?? null,
-        ];
+        $handler = $this->promptHandlers[$name];
+        $arguments = $params['arguments'] ?? [];
+        $definition = $this->promptDefinitions[$name];
+
+        try {
+            $result = $handler($arguments);
+
+            if (isset($definition['description'])) {
+                $result['description'] = $definition['description'];
+            }
+
+            return $result;
+        } catch (Throwable $e) {
+            throw new McpError("Prompt processing failed: {$e->getMessage()}", Types::ERROR_CODE['InternalError']);
+        }
+    }
+
+    /**
+     * Handle a resources/subscribe request.
+     *
+     * @param array $params the request parameters
+     * @return array an empty result
+     * @throws McpError if the request fails
+     */
+    public function handleSubscribe(array $params): array
+    {
+        if (! $this->initialized) {
+            throw new McpError('Server not initialized', Types::ERROR_CODE['ServerNotInitialized']);
+        }
+
+        $uri = $params['uri'] ?? null;
+        if (! $uri) {
+            throw new McpError('Resource URI is required', Types::ERROR_CODE['InvalidParams']);
+        }
+
+        // Parse the URI to get the scheme
+        $parsedUrl = parse_url($uri);
+        $scheme = $parsedUrl['scheme'] ?? null;
+
+        if (! $scheme || ! isset($this->resourceHandlers[$scheme])) {
+            throw new McpError("Resource scheme not supported: {$scheme}", Types::ERROR_CODE['InvalidParams']);
+        }
+
+        // Check if server supports subscriptions
+        $capabilities = $this->getServerCapabilities();
+        if (! isset($capabilities['resources']['subscribe']) || ! $capabilities['resources']['subscribe']) {
+            throw new McpError('Server does not support resource subscriptions', Types::ERROR_CODE['InvalidParams']);
+        }
+
+        // Implementation would normally track subscriptions here
+
+        return [];
+    }
+
+    /**
+     * Handle a resources/unsubscribe request.
+     *
+     * @param array $params the request parameters
+     * @return array an empty result
+     * @throws McpError if the request fails
+     */
+    public function handleUnsubscribe(array $params): array
+    {
+        if (! $this->initialized) {
+            throw new McpError('Server not initialized', Types::ERROR_CODE['ServerNotInitialized']);
+        }
+
+        $uri = $params['uri'] ?? null;
+        if (! $uri) {
+            throw new McpError('Resource URI is required', Types::ERROR_CODE['InvalidParams']);
+        }
+
+        // Implementation would normally remove subscription here
+
+        return [];
+    }
+
+    /**
+     * Notify clients about a resource update.
+     *
+     * @param string $uri the resource URI that changed
+     */
+    public function notifyResourceUpdated(string $uri): void
+    {
+        if (! $this->initialized || ! $this->transport) {
+            return;
+        }
+
+        $this->notify(Types::NOTIFICATION['ResourceUpdated'], [
+            'uri' => $uri,
+        ]);
+    }
+
+    /**
+     * Notify clients about changes to the resource list.
+     */
+    public function notifyResourceListChanged(): void
+    {
+        if (! $this->initialized || ! $this->transport) {
+            return;
+        }
+
+        $this->notify(Types::NOTIFICATION['ResourceListChanged'], []);
+    }
+
+    /**
+     * Notify clients about changes to the tool list.
+     */
+    public function notifyToolListChanged(): void
+    {
+        if (! $this->initialized || ! $this->transport) {
+            return;
+        }
+
+        $this->notify(Types::NOTIFICATION['ToolListChanged'], []);
+    }
+
+    /**
+     * Notify clients about changes to the prompt list.
+     */
+    public function notifyPromptListChanged(): void
+    {
+        if (! $this->initialized || ! $this->transport) {
+            return;
+        }
+
+        $this->notify(Types::NOTIFICATION['PromptListChanged'], []);
+    }
+
+    /**
+     * Get the server's capabilities.
+     *
+     * @return array the server capabilities
+     */
+    public function getServerCapabilities(): array
+    {
+        $capabilities = parent::getCapabilities();
+
+        // Add resource capabilities if resources are defined
+        if (! empty($this->resourceTemplates)) {
+            $capabilities['resources'] = $capabilities['resources'] ?? [];
+            $capabilities['resources']['listChanged'] = true;
+        }
+
+        // Add tool capabilities if tools are defined
+        if (! empty($this->toolDefinitions)) {
+            $capabilities['tools'] = $capabilities['tools'] ?? [];
+            $capabilities['tools']['listChanged'] = true;
+        }
+
+        // Add prompt capabilities if prompts are defined
+        if (! empty($this->promptDefinitions)) {
+            $capabilities['prompts'] = $capabilities['prompts'] ?? [];
+            $capabilities['prompts']['listChanged'] = true;
+        }
+
+        return $capabilities;
     }
 }

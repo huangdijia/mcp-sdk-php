@@ -36,6 +36,21 @@ use ModelContextProtocol\SDK\Shared\Transport;
 class SseClientTransport implements Transport
 {
     /**
+     * @var callable|null callback for when a message is received
+     */
+    public $onMessage;
+
+    /**
+     * @var callable|null callback for when the connection is closed
+     */
+    public $onClose;
+
+    /**
+     * @var callable|null callback for when an error occurs
+     */
+    public $onError;
+
+    /**
      * @var HttpClient the HTTP client
      */
     private HttpClient $client;
@@ -54,21 +69,6 @@ class SseClientTransport implements Transport
      * @var bool whether the transport is active
      */
     private bool $active = false;
-
-    /**
-     * @var callable|null callback for when a message is received
-     */
-    public $onMessage;
-
-    /**
-     * @var callable|null callback for when the connection is closed
-     */
-    public $onClose;
-
-    /**
-     * @var callable|null callback for when an error occurs
-     */
-    public $onError;
 
     /**
      * Constructor.

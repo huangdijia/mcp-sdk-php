@@ -303,12 +303,12 @@ abstract class Protocol
     /**
      * Check if a request has timed out.
      *
-     * @param string $id The request ID.
-     * @return bool Whether the request has timed out.
+     * @param string $id the request ID
+     * @return bool whether the request has timed out
      */
     protected function hasTimedOut(string $id): bool
     {
-        if (!isset($this->pendingRequests[$id])) {
+        if (! isset($this->pendingRequests[$id])) {
             return false;
         }
 

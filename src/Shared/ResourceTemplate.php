@@ -17,6 +17,26 @@ namespace ModelContextProtocol\SDK\Shared;
 class ResourceTemplate
 {
     /**
+     * @var bool whether this resource is listable
+     */
+    public bool $listable = false;
+
+    /**
+     * @var string the resource name
+     */
+    public string $name = '';
+
+    /**
+     * @var string the resource description
+     */
+    public string $description = '';
+
+    /**
+     * @var string the resource MIME type
+     */
+    public string $mimeType = '';
+
+    /**
      * @var string the URI template
      */
     private string $template;
@@ -36,6 +56,12 @@ class ResourceTemplate
     {
         $this->template = $template;
         $this->options = $options;
+
+        // Initialize properties from options
+        $this->listable = $options['listable'] ?? false;
+        $this->name = $options['name'] ?? '';
+        $this->description = $options['description'] ?? '';
+        $this->mimeType = $options['mimeType'] ?? '';
     }
 
     /**
@@ -46,6 +72,37 @@ class ResourceTemplate
     public function getTemplate(): string
     {
         return $this->template;
+    }
+
+    /**
+     * Get the URI template for API clients.
+     *
+     * @return string the URI template
+     */
+    public function getUriTemplate(): string
+    {
+        return $this->template;
+    }
+
+    /**
+     * Get an example URI based on this template.
+     *
+     * @return string example URI
+     */
+    public function getExampleUri(): string
+    {
+        $uri = $this->template;
+
+        // Replace all placeholder parameters with example values
+        $pattern = '/\{([^}]+)\}/';
+        if (preg_match_all($pattern, $uri, $matches)) {
+            foreach ($matches[1] as $param) {
+                $exampleValue = $this->options['examples'][$param] ?? 'example';
+                $uri = str_replace('{' . $param . '}', $exampleValue, $uri);
+            }
+        }
+
+        return $uri;
     }
 
     /**

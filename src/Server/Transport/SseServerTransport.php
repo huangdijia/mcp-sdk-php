@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace ModelContextProtocol\SDK\Server\Transport;
 
+use Exception;
 use ModelContextProtocol\SDK\Shared\Transport;
 
 /**
@@ -21,7 +22,7 @@ class SseServerTransport implements Transport
     /**
      * @var ?resource the output stream
      */
-    private $output = null;
+    private $output;
 
     /**
      * @var bool whether the transport is active
@@ -71,12 +72,11 @@ class SseServerTransport implements Transport
     /**
      * Send a message through the transport.
      *
-     * @param string $message The message to send.
-     * @return void
+     * @param string $message the message to send
      */
     public function send(string $message): void
     {
-        if (!$this->active) {
+        if (! $this->active) {
             // Store message in pending queue for later sending
             $this->pendingMessages[] = $message;
             return;
@@ -84,7 +84,7 @@ class SseServerTransport implements Transport
 
         // Format message as SSE
         $formattedMessage = "data: {$message}\n\n";
-        
+
         // Write to output
         fwrite($this->output, $formattedMessage);
         fflush($this->output);
@@ -92,8 +92,6 @@ class SseServerTransport implements Transport
 
     /**
      * Close the transport connection.
-     *
-     * @return void
      */
     public function close(): void
     {
@@ -154,9 +152,9 @@ class SseServerTransport implements Transport
     /**
      * Handle an error.
      *
-     * @param \Exception $error the error
+     * @param Exception $error the error
      */
-    public function handleError(\Exception $error): void
+    public function handleError(Exception $error): void
     {
         if ($this->onError) {
             call_user_func($this->onError, $error);

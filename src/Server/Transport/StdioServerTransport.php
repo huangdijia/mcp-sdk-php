@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace ModelContextProtocol\SDK\Server\Transport;
 
 use ModelContextProtocol\SDK\Shared\Transport;
+use Throwable;
 
 /**
  * STDIO transport implementation for MCP servers.
@@ -116,13 +117,13 @@ class StdioServerTransport implements Transport
     {
         $this->onerror = $callback;
     }
-    
+
     /**
      * Handle an error.
      *
-     * @param \Throwable $error the error
+     * @param Throwable $error the error
      */
-    public function handleError(\Throwable $error): void
+    public function handleError(Throwable $error): void
     {
         if ($this->onerror) {
             call_user_func($this->onerror, $error);

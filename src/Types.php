@@ -38,26 +38,117 @@ class Types
      * Error codes defined by the protocol.
      */
     public const ERROR_CODE = [
+        // SDK error codes
+        'ConnectionClosed' => -32000,
+        'RequestTimeout' => -32001,
+        'RequestCancelled' => -32004,
+        'RequestFailed' => -32005,
+
+        // Standard JSON-RPC error codes
         'ParseError' => -32700,
         'InvalidRequest' => -32600,
         'MethodNotFound' => -32601,
         'InvalidParams' => -32602,
         'InternalError' => -32603,
+
+        // Custom error codes
         'ServerNotInitialized' => -32002,
-        'UnknownErrorCode' => -32001,
-        'RequestCancelled' => -32800,
-        'ContentModified' => -32801,
-        'RequestTimeout' => -32802,
-        'RequestFailed' => -32803,
+        'UnknownErrorCode' => -32099,
     ];
 
     /**
      * Logging levels.
      */
     public const LOGGING_LEVEL = [
-        'Error' => 1,
-        'Warning' => 2,
-        'Info' => 3,
-        'Debug' => 4,
+        'Debug' => 'debug',
+        'Info' => 'info',
+        'Notice' => 'notice',
+        'Warning' => 'warning',
+        'Error' => 'error',
+        'Critical' => 'critical',
+        'Alert' => 'alert',
+        'Emergency' => 'emergency',
+    ];
+
+    /**
+     * Message roles.
+     */
+    public const MESSAGE_ROLE = [
+        'User' => 'user',
+        'Assistant' => 'assistant',
+    ];
+
+    /**
+     * Content types.
+     */
+    public const CONTENT_TYPE = [
+        'Text' => 'text',
+        'Image' => 'image',
+        'Resource' => 'resource',
+    ];
+
+    /**
+     * Stop reasons.
+     */
+    public const STOP_REASON = [
+        'EndTurn' => 'endTurn',
+        'StopSequence' => 'stopSequence',
+        'MaxTokens' => 'maxTokens',
+    ];
+
+    /**
+     * Context inclusion levels.
+     */
+    public const INCLUDE_CONTEXT = [
+        'None' => 'none',
+        'ThisServer' => 'thisServer',
+        'AllServers' => 'allServers',
+    ];
+
+    /**
+     * Reference types.
+     */
+    public const REF_TYPE = [
+        'Resource' => 'ref/resource',
+        'Prompt' => 'ref/prompt',
+    ];
+
+    /**
+     * Standard method names.
+     */
+    public const METHOD = [
+        // Client methods
+        'Ping' => 'ping',
+        'Initialize' => 'initialize',
+        'Complete' => 'completion/complete',
+        'SetLevel' => 'logging/setLevel',
+        'GetPrompt' => 'prompts/get',
+        'ListPrompts' => 'prompts/list',
+        'ListResources' => 'resources/list',
+        'ListResourceTemplates' => 'resources/templates/list',
+        'ReadResource' => 'resources/read',
+        'Subscribe' => 'resources/subscribe',
+        'Unsubscribe' => 'resources/unsubscribe',
+        'CallTool' => 'tools/call',
+        'ListTools' => 'tools/list',
+
+        // Server methods
+        'CreateMessage' => 'sampling/createMessage',
+        'ListRoots' => 'roots/list',
+    ];
+
+    /**
+     * Standard notification methods.
+     */
+    public const NOTIFICATION = [
+        'Cancelled' => 'notifications/cancelled',
+        'Progress' => 'notifications/progress',
+        'Initialized' => 'notifications/initialized',
+        'RootsListChanged' => 'notifications/roots/list_changed',
+        'Message' => 'notifications/message',
+        'ResourceUpdated' => 'notifications/resources/updated',
+        'ResourceListChanged' => 'notifications/resources/list_changed',
+        'ToolListChanged' => 'notifications/tools/list_changed',
+        'PromptListChanged' => 'notifications/prompts/list_changed',
     ];
 }
