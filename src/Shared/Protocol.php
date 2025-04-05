@@ -405,7 +405,6 @@ abstract class Protocol
 
             $this->sendResponse($id, $result);
         } catch (Throwable $e) {
-            var_dump($e);
             $errorCode = $e instanceof McpError ? $e->getCode() : Types::ERROR_CODE['InternalError'];
             $this->sendErrorResponse($id, $e->getMessage(), $errorCode);
         }
