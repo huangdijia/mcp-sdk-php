@@ -27,6 +27,7 @@ class Types
     public const SUPPORTED_PROTOCOL_VERSIONS = [
         self::LATEST_PROTOCOL_VERSION,
         '2024-10-07',
+        '0.1.0',
     ];
 
     /**

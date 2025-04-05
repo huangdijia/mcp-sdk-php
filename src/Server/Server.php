@@ -141,6 +141,16 @@ class Server extends Protocol
     }
 
     /**
+     * Get whether the server is initialized.
+     *
+     * @return bool whether the server is initialized
+     */
+    public function getIsInitialized(): bool
+    {
+        return $this->initialized;
+    }
+
+    /**
      * Check if the client supports a specific capability.
      *
      * @param string $capability the capability to check
