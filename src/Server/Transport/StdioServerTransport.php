@@ -50,19 +50,28 @@ class StdioServerTransport implements Transport
     private $onError;
 
     /**
+     * @var bool whether the internal reading loop is enabled
+     */
+    private bool $useInternalLoop = true;
+
+    /**
      * Constructor.
      *
      * @param resource|null $input the input stream (defaults to STDIN)
      * @param resource|null $output the output stream (defaults to STDOUT)
+     * @param bool $useInternalLoop whether to use the internal reading loop (defaults to true)
      */
-    public function __construct($input = null, $output = null)
+    public function __construct($input = null, $output = null, bool $useInternalLoop = true)
     {
         $this->input = $input ?? STDIN;
         $this->output = $output ?? STDOUT;
         $this->active = true;
+        $this->useInternalLoop = $useInternalLoop;
 
-        // Start reading from stdin
-        $this->startReading();
+        // Start reading from stdin if internal loop is enabled
+        if ($this->useInternalLoop) {
+            $this->startReading();
+        }
     }
 
     /**
@@ -127,6 +136,18 @@ class StdioServerTransport implements Transport
     {
         if ($this->onError) {
             call_user_func($this->onError, $error);
+        }
+    }
+
+    /**
+     * Handle an incoming message manually.
+     * 
+     * @param string $message the message to handle
+     */
+    public function handleMessage(string $message): void
+    {
+        if ($this->onMessage) {
+            call_user_func($this->onMessage, $message);
         }
     }
 

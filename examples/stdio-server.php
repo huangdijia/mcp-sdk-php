@@ -228,16 +228,18 @@ $server->onResponse = function (string $requestId, string $method) {
  */
 echo "正在启动 MCP 服务器...\n";
 
-// 创建标准输入/输出传输层
-$transport = new StdioServerTransport();
+// 创建标准输入/输出传输层，禁用内部循环
+$transport = new StdioServerTransport(null, null, false);
+
+// 设置transport的onMessage回调来处理消息
+$transport->setOnMessage(function ($message) use ($server) {
+    $server->handleMessage($message);
+});
 
 // 连接服务器与传输层
 $server->connect($transport);
 
-// 手动处理 StdioServerTransport
-// 修复问题: 由于 StdioServerTransport 的 startReading 方法在原实现中会阻塞主线程，
-// 但在某些环境下可能无法正确处理来自 stdin 的消息
-// 这里我们手动实现消息处理循环
+// 手动处理消息循环
 $input = STDIN;
 stream_set_blocking($input, false);
 
@@ -246,11 +248,9 @@ while (true) {
     // 读取输入
     $line = fgets($input);
     if ($line !== false && trim($line) !== '') {
-        // 我们不应该尝试直接访问transport的onMessage属性，因为它是私有的
-        // 相反，我们可以通过Protocol类的handleMessage方法来处理消息
-        // 该方法会在内部调用已注册的onMessage回调
+        // 将消息传递给transport的onMessage回调处理
         $trimmedLine = trim($line);
-        $server->handleMessage($trimmedLine);
+        $transport->handleMessage($trimmedLine);
     }
 
     // 休眠以避免高 CPU 使用率
