@@ -56,12 +56,9 @@ $server->tool('add', function (array $params) {
             ],
         ];
     }
-}, [
-    'description' => '将两个数字相加',
-    'parameters' => [
-        'a' => ['type' => 'number', 'description' => '第一个数字'],
-        'b' => ['type' => 'number', 'description' => '第二个数字'],
-    ],
+}, '将两个数字相加', [
+    'a' => ['type' => 'number', 'description' => '第一个数字'],
+    'b' => ['type' => 'number', 'description' => '第二个数字'],
 ]);
 
 // 添加乘法工具
@@ -83,12 +80,9 @@ $server->tool('multiply', function (array $params) {
             ],
         ];
     }
-}, [
-    'description' => '将两个数字相乘',
-    'parameters' => [
-        'a' => ['type' => 'number', 'description' => '第一个数字'],
-        'b' => ['type' => 'number', 'description' => '第二个数字'],
-    ],
+}, '将两个数字相乘', [
+    'a' => ['type' => 'number', 'description' => '第一个数字'],
+    'b' => ['type' => 'number', 'description' => '第二个数字'],
 ]);
 
 // 添加一个更复杂的字符串处理工具
@@ -118,15 +112,12 @@ $server->tool('textProcess', function (array $params) {
             ['type' => 'text', 'text' => $result],
         ],
     ];
-}, [
-    'description' => '处理文本字符串',
-    'parameters' => [
-        'text' => ['type' => 'string', 'description' => '要处理的文本'],
-        'operation' => [
-            'type' => 'string',
-            'description' => '要执行的操作',
-            'enum' => ['uppercase', 'lowercase', 'capitalize', 'reverse', 'none'],
-        ],
+}, '处理文本字符串', [
+    'text' => ['type' => 'string', 'description' => '要处理的文本'],
+    'operation' => [
+        'type' => 'string',
+        'description' => '要执行的操作',
+        'enum' => ['uppercase', 'lowercase', 'capitalize', 'reverse', 'none'],
     ],
 ]);
 

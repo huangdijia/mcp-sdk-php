@@ -29,6 +29,11 @@ class Server extends Protocol
     public $onInitialized;
 
     /**
+     * @var array server capabilities
+     */
+    protected array $capabilities;
+
+    /**
      * @var array|null client capabilities
      */
     private ?array $clientCapabilities = null;
@@ -37,11 +42,6 @@ class Server extends Protocol
      * @var array|null client version information
      */
     private ?array $clientVersion = null;
-
-    /**
-     * @var array server capabilities
-     */
-    protected array $capabilities;
 
     /**
      * @var string|null server instructions

@@ -14,6 +14,7 @@ namespace ModelContextProtocol\SDK\Server;
 use ModelContextProtocol\SDK\Exceptions\McpError;
 use ModelContextProtocol\SDK\Shared\ResourceTemplate;
 use ModelContextProtocol\SDK\Types;
+use stdClass;
 use Throwable;
 
 /**
@@ -99,24 +100,24 @@ class McpServer extends Server
      *
      * @param string $name the tool name
      * @param callable $handler the tool handler function
-     * @param array $definition the tool definition (including description and inputSchema)
      * @return self for chaining
      */
-    public function tool(string $name, callable $handler, array $definition = []): self
+    public function tool(string $name, callable $handler, string $description = '', array $properties = []): self
     {
         $this->toolHandlers[$name] = $handler;
 
         // Ensure the tool definition has required properties
-        $this->toolDefinitions[$name] = array_merge([
+        $this->toolDefinitions[$name] = [
             'name' => $name,
-            'description' => '',
+            'description' => $description,
             'inputSchema' => [
                 'type' => 'object',
-                'properties' => [],
+                'properties' => $properties,
+                '$schema' => 'http://json-schema.org/draft-07/schema#',
             ],
-        ], $definition);
+        ];
 
-        $this->capabilities['tools'] ??= new \stdClass();
+        $this->capabilities['tools'] ??= new stdClass();
 
         return $this;
     }
@@ -134,7 +135,7 @@ class McpServer extends Server
         $this->resourceHandlers[$scheme] = $handler;
         $this->resourceTemplates[$scheme] = $template;
 
-        $this->capabilities['resources'] ??= new \stdClass();
+        $this->capabilities['resources'] ??= new stdClass();
 
         return $this;
     }
@@ -158,7 +159,7 @@ class McpServer extends Server
             'arguments' => [],
         ], $definition);
 
-        $this->capabilities['prompts'] ??= new \stdClass();
+        $this->capabilities['prompts'] ??= new stdClass();
 
         return $this;
     }
