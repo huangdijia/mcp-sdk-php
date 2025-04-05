@@ -520,26 +520,49 @@ class McpServer extends Server
      */
     public function getServerCapabilities(): array
     {
-        $capabilities = parent::getCapabilities();
+        // 使用直接访问父类的 capabilities 属性的方法，而不是调用不存在的 getCapabilities() 方法
+        // 这需要在父类 Server 中将 $capabilities 属性改为 protected
+        // 临时解决方案是创建一个基本的空能力集合
+        $capabilities = []; // 创建基本能力集合而不是调用不存在的方法
 
-        // Add resource capabilities if resources are defined
+        // 添加资源能力（如果已定义资源）
         if (! empty($this->resourceTemplates)) {
             $capabilities['resources'] = $capabilities['resources'] ?? [];
             $capabilities['resources']['listChanged'] = true;
         }
 
-        // Add tool capabilities if tools are defined
+        // 添加工具能力（如果已定义工具）
         if (! empty($this->toolDefinitions)) {
             $capabilities['tools'] = $capabilities['tools'] ?? [];
             $capabilities['tools']['listChanged'] = true;
         }
 
-        // Add prompt capabilities if prompts are defined
+        // 添加提示词能力（如果已定义提示词）
         if (! empty($this->promptDefinitions)) {
             $capabilities['prompts'] = $capabilities['prompts'] ?? [];
             $capabilities['prompts']['listChanged'] = true;
         }
 
         return $capabilities;
+    }
+
+    /**
+     * Get the capabilities of this server.
+     * This is a helper method to access the capabilities from the parent class.
+     *
+     * @return array the capabilities
+     */
+    protected function getCapabilities(): array
+    {
+        // 返回一个基本能力集合
+        // 在理想情况下，我们应该能够访问父类的 $capabilities 属性
+        // 但由于它是私有的，我们需要提供一个基本实现
+        return [
+            'resources' => [
+                'subscribe' => false,
+            ],
+            'tools' => [],
+            'prompts' => [],
+        ];
     }
 }
