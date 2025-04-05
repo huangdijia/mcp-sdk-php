@@ -101,6 +101,8 @@ class Server extends Protocol
             $result['instructions'] = $this->instructions;
         }
 
+        $this->handleInitialized($params);
+
         return $result;
     }
 
