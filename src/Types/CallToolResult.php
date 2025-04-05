@@ -15,6 +15,9 @@ use InvalidArgumentException;
 
 class CallToolResult extends Result
 {
+    /**
+     * @param (TextContent|ImageContent|AudioContent|EmbeddedResource)[] $content
+     */
     public function __construct(
         public array $content,
         public ?bool $isError = null,
