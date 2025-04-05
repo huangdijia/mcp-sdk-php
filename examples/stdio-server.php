@@ -240,8 +240,7 @@ while (true) {
     $line = fgets($input);
     if ($line !== false && trim($line) !== '') {
         // 将消息传递给transport的onMessage回调处理
-        $trimmedLine = trim($line);
-        $server->handleMessage($trimmedLine);
+        $transport->handleMessage(trim($line));
     }
 
     // 休眠以避免高 CPU 使用率
