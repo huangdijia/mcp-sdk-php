@@ -148,16 +148,16 @@ class McpServer extends Server
      * @param array $definition prompt definition (including description and arguments)
      * @return self for chaining
      */
-    public function prompt(string $name, callable $handler, array $definition = []): self
+    public function prompt(string $name, callable $handler, string $description = '', array $arguments = []): self
     {
         $this->promptHandlers[$name] = $handler;
 
         // Ensure the prompt definition has required properties
-        $this->promptDefinitions[$name] = array_merge([
+        $this->promptDefinitions[$name] = [
             'name' => $name,
-            'description' => '',
-            'arguments' => [],
-        ], $definition);
+            'description' => $description,
+            'arguments' => $arguments,
+        ];
 
         $this->capabilities['prompts'] ??= new stdClass();
 
