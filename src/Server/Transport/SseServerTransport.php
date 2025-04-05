@@ -11,83 +11,208 @@ declare(strict_types=1);
 
 namespace ModelContextProtocol\SDK\Server\Transport;
 
-use Exception;
+use JsonException;
+use ModelContextProtocol\SDK\Exceptions\McpError;
 use ModelContextProtocol\SDK\Shared\Transport;
+use ModelContextProtocol\SDK\Types;
 
 /**
- * Server-Sent Events (SSE) transport implementation for MCP servers.
+ * Server transport for SSE: this will send messages over an SSE connection
+ * and receive messages from HTTP POST requests.
  */
 class SseServerTransport implements Transport
 {
     /**
-     * @var ?resource the output stream
+     * Maximum message size in bytes (4MB).
+     *
+     * @var int
      */
-    private $output;
+    private const MAXIMUM_MESSAGE_SIZE = 4194304; // 4MB
 
     /**
-     * @var bool whether the transport is active
+     * The SSE response resource.
+     *
+     * @var resource|null
      */
-    private bool $active = false;
+    private $sseResponse;
 
     /**
-     * @var callable|null callback for when a message is received
+     * Session ID for this transport.
+     */
+    private string $sessionId;
+
+    /**
+     * Callback for when a message is received.
+     *
+     * @var callable|null
      */
     private $onMessage;
 
     /**
-     * @var callable|null callback for when the connection is closed
+     * Callback for when the connection is closed.
+     *
+     * @var callable|null
      */
     private $onClose;
 
     /**
-     * @var callable|null callback for when an error occurs
+     * Callback for when an error occurs.
+     *
+     * @var callable|null
      */
     private $onError;
 
     /**
-     * @var array pending messages to be sent when connection becomes active
+     * Creates a new SSE server transport, which will direct the client to POST messages
+     * to the URL identified by `$endpoint`.
+     *
+     * @param string $endpoint the endpoint URL for POST requests
+     * @param resource $response the response resource for SSE streaming
      */
-    private array $pendingMessages = []; // @phpstan-ignore-line
+    public function __construct(
+        private string $endpoint,
+        private $response
+    ) {
+        $this->sessionId = $this->generateUuid();
+    }
 
     /**
-     * Constructor.
+     * Start the SSE connection.
      *
-     * @param resource|null $output the output stream (defaults to php://output)
+     * @throws McpError if already started
      */
-    public function __construct($output = null)
+    public function start(): void
     {
-        $this->output = $output ?? fopen('php://output', 'w');
-        $this->active = true;
+        if ($this->sseResponse !== null) {
+            throw new McpError(
+                'SSEServerTransport already started! If using Server class, note that connect() calls start() automatically.',
+                Types::ERROR_CODE['InternalError']
+            );
+        }
 
-        // Set headers for SSE
+        // Set appropriate headers for SSE
         header('Content-Type: text/event-stream');
         header('Cache-Control: no-cache');
         header('Connection: keep-alive');
-        header('X-Accel-Buffering: no'); // Disable buffering for Nginx
 
-        // Flush headers
-        flush();
+        // Disable output buffering and enable implicit flush
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        ob_implicit_flush(true);
+
+        // Send the endpoint event
+        echo "event: endpoint\n";
+        echo 'data: ' . urlencode("{$this->endpoint}?sessionId={$this->sessionId}") . "\n\n";
+
+        $this->sseResponse = $this->response;
+
+        // Register shutdown function to handle connection close
+        register_shutdown_function(function () {
+            $this->sseResponse = null;
+            if ($this->onClose) {
+                call_user_func($this->onClose);
+            }
+        });
+    }
+
+    /**
+     * Handle incoming POST message.
+     *
+     * @param string|null $body the raw request body
+     * @param string|null $contentType the content type header
+     * @return bool whether the message was handled successfully
+     * @throws McpError if connection not established
+     */
+    public function handlePostMessage(?string $body = null, ?string $contentType = null): bool
+    {
+        if ($this->sseResponse === null) {
+            $message = 'SSE connection not established';
+            http_response_code(500);
+            echo $message;
+            throw new McpError($message, Types::ERROR_CODE['InternalError']);
+        }
+
+        try {
+            // Validate content type
+            if (! $contentType || strpos($contentType, 'application/json') === false) {
+                throw new McpError("Unsupported content-type: {$contentType}", Types::ERROR_CODE['InvalidRequest']);
+            }
+
+            // Check message size
+            if ($body !== null && strlen($body) > self::MAXIMUM_MESSAGE_SIZE) {
+                throw new McpError(
+                    'Message too large: maximum size is ' . (self::MAXIMUM_MESSAGE_SIZE / 1024 / 1024) . 'MB',
+                    Types::ERROR_CODE['InvalidRequest']
+                );
+            }
+
+            return $this->handleMessage($body);
+        } catch (McpError $error) {
+            http_response_code(400);
+            echo $error->getMessage();
+
+            if ($this->onError) {
+                call_user_func($this->onError, $error);
+            }
+
+            return false;
+        }
+    }
+
+    /**
+     * Handle a client message, regardless of how it arrived.
+     *
+     * @param string|null $message the raw message
+     * @return bool whether the message was successfully processed
+     */
+    public function handleMessage(?string $message): bool
+    {
+        if ($message === null) {
+            return false;
+        }
+
+        try {
+            $parsedMessage = json_decode($message, true, 512, JSON_THROW_ON_ERROR);
+
+            if ($this->onMessage) {
+                call_user_func($this->onMessage, $parsedMessage);
+            }
+
+            http_response_code(202);
+            echo 'Accepted';
+            return true;
+        } catch (JsonException $e) {
+            http_response_code(400);
+            echo 'Invalid message: ' . $message;
+
+            if ($this->onError) {
+                call_user_func($this->onError, $e);
+            }
+
+            return false;
+        }
     }
 
     /**
      * Send a message through the transport.
      *
      * @param string $message the message to send
+     * @throws McpError if not connected
      */
     public function send(string $message): void
     {
-        if (! $this->active) {
-            // Store message in pending queue for later sending
-            $this->pendingMessages[] = $message;
-            return;
+        if ($this->sseResponse === null) {
+            throw new McpError('Not connected', Types::ERROR_CODE['InternalError']);
         }
 
-        // Format message as SSE
-        $formattedMessage = "data: {$message}\n\n";
+        echo "event: message\n";
+        echo "data: {$message}\n\n";
 
-        // Write to output
-        fwrite($this->output, $formattedMessage);
-        fflush($this->output);
+        if (connection_status() !== CONNECTION_NORMAL) {
+            $this->close();
+        }
     }
 
     /**
@@ -95,15 +220,12 @@ class SseServerTransport implements Transport
      */
     public function close(): void
     {
-        $this->active = false;
+        if ($this->sseResponse !== null) {
+            $this->sseResponse = null;
 
-        if ($this->output !== null) {
-            fclose($this->output);
-            $this->output = null;
-        }
-
-        if ($this->onClose) {
-            call_user_func($this->onClose);
+            if ($this->onClose) {
+                call_user_func($this->onClose);
+            }
         }
     }
 
@@ -138,26 +260,31 @@ class SseServerTransport implements Transport
     }
 
     /**
-     * Handle an incoming message.
+     * Get the session ID for this transport.
      *
-     * @param string $message the message
+     * @return string the session ID
      */
-    public function handleMessage(string $message): void
+    public function getSessionId(): string
     {
-        if ($this->onMessage) {
-            call_user_func($this->onMessage, $message);
-        }
+        return $this->sessionId;
     }
 
     /**
-     * Handle an error.
+     * Generate a UUID v4.
      *
-     * @param Exception $error the error
+     * @return string the generated UUID
      */
-    public function handleError(Exception $error): void
+    private function generateUuid(): string
     {
-        if ($this->onError) {
-            call_user_func($this->onError, $error);
-        }
+        // Generate 16 random bytes
+        $data = random_bytes(16);
+
+        // Set version to 0100
+        $data[6] = chr(ord($data[6]) & 0x0F | 0x40);
+        // Set bits 6-7 to 10
+        $data[8] = chr(ord($data[8]) & 0x3F | 0x80);
+
+        // Format as string
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 }
