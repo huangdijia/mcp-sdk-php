@@ -203,3 +203,36 @@ SDK支持多种资源类型，可以通过URI方案访问：
 3. **random** - 随机数生成
    - URI模式：`random://{min}/{max}`
    - 示例：`random://1/100` → 生成1到100之间的随机数
+
+## MCP Server Setting
+
+```json
+{
+    "servers": {
+        "test-mcp": {
+            "command": "php",
+            "args": [
+                "[your-path]/mcp-php/examples/stdio-server.php",
+            ],
+            "env": {}
+        }
+    }
+}
+```
+
+Output:
+
+```bash
+2025-04-06 20:08:54.123 [info] 正在停止服务器 test-mcp
+2025-04-06 20:08:54.136 [info] 连接状态: 已停止
+2025-04-06 20:08:54.138 [info] 正在启动服务器 test-mcp
+2025-04-06 20:08:54.139 [info] 连接状态: 正在启动
+2025-04-06 20:08:54.139 [info] Starting server from LocalProcess extension host
+2025-04-06 20:08:54.148 [info] 连接状态: 正在启动
+2025-04-06 20:08:54.148 [info] 连接状态: 正在运行
+2025-04-06 20:08:54.353 [warning] Failed to parse message: "正在启动 MCP 服务器...\n"
+2025-04-06 20:08:54.353 [warning] Failed to parse message: "服务器 \"PHP Example Server\" v1.0.0 已初始化并准备接收请求\n"
+2025-04-06 20:08:54.354 [warning] Failed to parse message: "启动时间: 2025-04-06 12:08:54\n"
+2025-04-06 20:08:54.354 [warning] Failed to parse message: "------------------------------------------------------\n"
+2025-04-06 20:08:54.379 [info] Discovered 3 tools
+```
