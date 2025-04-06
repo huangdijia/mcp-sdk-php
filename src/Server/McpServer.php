@@ -93,6 +93,25 @@ class McpServer extends Server
         $this->setRequestHandler(Types::METHOD['GetPrompt'], [$this, 'handleGetPrompt']);
         $this->setRequestHandler(Types::METHOD['Subscribe'], [$this, 'handleSubscribe']);
         $this->setRequestHandler(Types::METHOD['Unsubscribe'], [$this, 'handleUnsubscribe']);
+
+        // Set up shutdown handler to ensure clean resource release
+        register_shutdown_function([$this, 'shutdown']);
+    }
+
+    /**
+     * Clean up resources when the server is shutting down.
+     */
+    public function shutdown(): void
+    {
+        if ($this->transport) {
+            $this->logger->info('Server shutting down, cleaning up resources');
+            $this->disconnect();
+        }
+
+        // Clear handlers and other resources
+        $this->toolHandlers = [];
+        $this->resourceHandlers = [];
+        $this->promptHandlers = [];
     }
 
     /**
@@ -189,7 +208,16 @@ class McpServer extends Server
         $handler = $this->toolHandlers[$name];
 
         try {
+            // Validate arguments against tool definition if available
+            if (isset($this->toolDefinitions[$name]['inputSchema']['properties'])) {
+                $this->validateToolArguments($name, $arguments);
+            }
+
             $result = $handler($arguments);
+
+            // Handle different protocol versions
+            $clientVersion = $this->getClientVersion();
+            $protocolVersion = $clientVersion['protocolVersion'] ?? Types::LATEST_PROTOCOL_VERSION;
 
             // Support for protocol version 2024-11-05+
             if (! isset($result['content'])) {
@@ -201,7 +229,7 @@ class McpServer extends Server
                                 'type' => 'text',
                                 'text' => is_string($result['toolResult'])
                                     ? $result['toolResult']
-                                    : json_encode($result['toolResult']),
+                                    : json_encode($result['toolResult'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                             ],
                         ],
                     ];
@@ -219,7 +247,16 @@ class McpServer extends Server
             }
 
             return $result;
+        } catch (McpError $e) {
+            // Rethrow McpError exceptions directly
+            throw $e;
         } catch (Throwable $e) {
+            $this->logger->error('Tool execution error', [
+                'tool' => $name,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             // Return error in content format
             return [
                 'content' => [
@@ -339,9 +376,16 @@ class McpServer extends Server
 
         // Parse the URI to get the scheme
         $parsedUrl = parse_url($uri);
-        $scheme = $parsedUrl['scheme'] ?? null;
+        if ($parsedUrl === false) {
+            throw new McpError("Invalid URI format: {$uri}", Types::ERROR_CODE['InvalidParams']);
+        }
 
-        if (! $scheme || ! isset($this->resourceHandlers[$scheme])) {
+        $scheme = $parsedUrl['scheme'] ?? null;
+        if (! $scheme) {
+            throw new McpError("Missing scheme in URI: {$uri}", Types::ERROR_CODE['InvalidParams']);
+        }
+
+        if (! isset($this->resourceHandlers[$scheme])) {
             throw new McpError("Resource scheme not supported: {$scheme}", Types::ERROR_CODE['InvalidParams']);
         }
 
@@ -349,16 +393,51 @@ class McpServer extends Server
         $handler = $this->resourceHandlers[$scheme];
 
         try {
-            $params = $template->extractParams($uri);
-            $content = $handler($uri, $params);
+            // Validate URI against template
+            if (! $template->matchesUri($uri)) {
+                throw new McpError("URI does not match template format: {$uri}", Types::ERROR_CODE['InvalidParams']);
+            }
+
+            $extractedParams = $template->extractParams($uri);
+
+            // Log resource access
+            $this->logger->info('Resource access', [
+                'uri' => $uri,
+                'scheme' => $scheme,
+                'params' => $extractedParams,
+            ]);
+
+            $content = $handler($uri, $extractedParams);
 
             // Ensure content is properly formatted
             if (! isset($content['contents']) || ! is_array($content['contents'])) {
                 throw new McpError('Invalid resource content format', Types::ERROR_CODE['InternalError']);
             }
 
+            // Validate content structure
+            foreach ($content['contents'] as $item) {
+                if (! isset($item['type'])) {
+                    throw new McpError('Content item missing type', Types::ERROR_CODE['InternalError']);
+                }
+
+                if ($item['type'] === 'text' && ! isset($item['text'])) {
+                    throw new McpError('Text content missing text field', Types::ERROR_CODE['InternalError']);
+                }
+                if ($item['type'] === 'image' && ! isset($item['url'])) {
+                    throw new McpError('Image content missing url field', Types::ERROR_CODE['InternalError']);
+                }
+            }
+
             return $content;
+        } catch (McpError $e) {
+            // Rethrow McpError with original code
+            throw $e;
         } catch (Throwable $e) {
+            $this->logger->error('Resource read failed', [
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             throw new McpError("Resource read failed: {$e->getMessage()}", Types::ERROR_CODE['InternalError']);
         }
     }
@@ -492,52 +571,123 @@ class McpServer extends Server
      * Notify clients about a resource update.
      *
      * @param string $uri the resource URI that changed
+     * @return bool whether the notification was sent
      */
-    public function notifyResourceUpdated(string $uri): void
+    public function notifyResourceUpdated(string $uri): bool
     {
         if (! $this->initialized || ! $this->transport) {
-            return;
+            return false;
         }
 
-        $this->notify(Types::NOTIFICATION['ResourceUpdated'], [
-            'uri' => $uri,
-        ]);
+        // Check if client supports this notification
+        if (! $this->clientSupports('resources.updated')) {
+            $this->logger->info('Client does not support resource update notifications');
+            return false;
+        }
+
+        try {
+            $this->notify(Types::NOTIFICATION['ResourceUpdated'], [
+                'uri' => $uri,
+                'timestamp' => time(),
+            ]);
+            return true;
+        } catch (Throwable $e) {
+            $this->logger->error('Failed to send resource update notification', [
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
      * Notify clients about changes to the resource list.
+     *
+     * @return bool whether the notification was sent
      */
-    public function notifyResourceListChanged(): void
+    public function notifyResourceListChanged(): bool
     {
         if (! $this->initialized || ! $this->transport) {
-            return;
+            return false;
         }
 
-        $this->notify(Types::NOTIFICATION['ResourceListChanged'], []);
+        // Check if client supports this notification
+        if (! $this->clientSupports('resources.listChanged')) {
+            $this->logger->info('Client does not support resource list change notifications');
+            return false;
+        }
+
+        try {
+            $this->notify(Types::NOTIFICATION['ResourceListChanged'], [
+                'timestamp' => time(),
+            ]);
+            return true;
+        } catch (Throwable $e) {
+            $this->logger->error('Failed to send resource list change notification', [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
      * Notify clients about changes to the tool list.
+     *
+     * @return bool whether the notification was sent
      */
-    public function notifyToolListChanged(): void
+    public function notifyToolListChanged(): bool
     {
         if (! $this->initialized || ! $this->transport) {
-            return;
+            return false;
         }
 
-        $this->notify(Types::NOTIFICATION['ToolListChanged'], []);
+        // Check if client supports this notification
+        if (! $this->clientSupports('tools.listChanged')) {
+            $this->logger->info('Client does not support tool list change notifications');
+            return false;
+        }
+
+        try {
+            $this->notify(Types::NOTIFICATION['ToolListChanged'], [
+                'timestamp' => time(),
+            ]);
+            return true;
+        } catch (Throwable $e) {
+            $this->logger->error('Failed to send tool list change notification', [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
      * Notify clients about changes to the prompt list.
+     *
+     * @return bool whether the notification was sent
      */
-    public function notifyPromptListChanged(): void
+    public function notifyPromptListChanged(): bool
     {
         if (! $this->initialized || ! $this->transport) {
-            return;
+            return false;
         }
 
-        $this->notify(Types::NOTIFICATION['PromptListChanged'], []);
+        // Check if client supports this notification
+        if (! $this->clientSupports('prompts.listChanged')) {
+            $this->logger->info('Client does not support prompt list change notifications');
+            return false;
+        }
+
+        try {
+            $this->notify(Types::NOTIFICATION['PromptListChanged'], [
+                'timestamp' => time(),
+            ]);
+            return true;
+        } catch (Throwable $e) {
+            $this->logger->error('Failed to send prompt list change notification', [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
@@ -557,6 +707,20 @@ class McpServer extends Server
         // 添加资源能力（如果已定义资源）
         if (! empty($this->resourceTemplates)) {
             $capabilities['resources']['listChanged'] = true;
+            $capabilities['resources']['updated'] = true;
+
+            // Add subscribe capability if any resource templates support it
+            $hasSubscribable = false;
+            foreach ($this->resourceTemplates as $template) {
+                if ($template->subscribable ?? false) {
+                    $hasSubscribable = true;
+                    break;
+                }
+            }
+
+            if ($hasSubscribable) {
+                $capabilities['resources']['subscribe'] = true;
+            }
         }
 
         // 添加工具能力（如果已定义工具）
@@ -569,6 +733,68 @@ class McpServer extends Server
             $capabilities['prompts']['listChanged'] = true;
         }
 
+        // Add protocol version capabilities
+        $capabilities['protocolVersions'] = Types::SUPPORTED_PROTOCOL_VERSIONS;
+
         return $capabilities;
+    }
+
+    /**
+     * Validate tool arguments against the tool's input schema.
+     *
+     * @param string $toolName the tool name
+     * @param array $arguments the arguments to validate
+     * @throws McpError if validation fails
+     */
+    private function validateToolArguments(string $toolName, array $arguments): void
+    {
+        $properties = $this->toolDefinitions[$toolName]['inputSchema']['properties'] ?? [];
+        $required = $this->toolDefinitions[$toolName]['inputSchema']['required'] ?? [];
+
+        // Check required parameters
+        foreach ($required as $param) {
+            if (! isset($arguments[$param])) {
+                throw new McpError("Missing required parameter: {$param}", Types::ERROR_CODE['InvalidParams']);
+            }
+        }
+
+        // Basic type validation
+        foreach ($arguments as $key => $value) {
+            if (! isset($properties[$key])) {
+                continue; // Skip unknown parameters
+            }
+
+            $type = $properties[$key]['type'] ?? null;
+            if ($type && ! $this->validateParameterType($value, $type)) {
+                throw new McpError("Invalid type for parameter '{$key}': expected {$type}", Types::ERROR_CODE['InvalidParams']);
+            }
+        }
+    }
+
+    /**
+     * Validate a parameter value against an expected type.
+     *
+     * @param mixed $value the value to validate
+     * @param string $type the expected type
+     * @return bool whether the value matches the expected type
+     */
+    private function validateParameterType($value, string $type): bool
+    {
+        switch ($type) {
+            case 'string':
+                return is_string($value);
+            case 'number':
+                return is_numeric($value);
+            case 'integer':
+                return is_int($value) || (is_string($value) && ctype_digit($value));
+            case 'boolean':
+                return is_bool($value);
+            case 'array':
+                return is_array($value);
+            case 'object':
+                return is_object($value) || (is_array($value) && array_keys($value) !== range(0, count($value) - 1));
+            default:
+                return true; // Unknown types are accepted
+        }
     }
 }

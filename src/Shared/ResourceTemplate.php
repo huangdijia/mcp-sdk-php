@@ -22,6 +22,11 @@ class ResourceTemplate
     public bool $listable = false;
 
     /**
+     * @var bool whether this resource supports subscription
+     */
+    public bool $subscribable = false;
+
+    /**
      * @var string the resource name
      */
     public string $name = '';
@@ -59,6 +64,7 @@ class ResourceTemplate
 
         // Initialize properties from options
         $this->listable = $options['listable'] ?? false;
+        $this->subscribable = $options['subscribable'] ?? false;
         $this->name = $options['name'] ?? '';
         $this->description = $options['description'] ?? '';
         $this->mimeType = $options['mimeType'] ?? '';
@@ -116,7 +122,25 @@ class ResourceTemplate
     }
 
     /**
-     * Extract parameters from a URI using this template.
+     * Check if a URI matches this template's format.
+     *
+     * @param string $uri the URI to check
+     * @return bool whether the URI matches the template format
+     */
+    public function matchesUri(string $uri): bool
+    {
+        $pattern = '/\{([^}]+)\}/'; // Match {param} placeholders
+
+        // Create a regex pattern from the template
+        $regexPattern = preg_quote($this->template, '/');
+        $regexPattern = preg_replace($pattern, '([^/]+)', $regexPattern);
+        $regexPattern = '/^' . $regexPattern . '$/'; // Anchor to start and end
+
+        return (bool) preg_match($regexPattern, $uri);
+    }
+
+    /**
+     * Extract parameters from a URI based on this template.
      *
      * @param string $uri the URI to extract parameters from
      * @return array the extracted parameters
@@ -124,20 +148,21 @@ class ResourceTemplate
     public function extractParams(string $uri): array
     {
         $params = [];
+        $pattern = '/\{([^}]+)\}/'; // Match {param} placeholders
 
-        // Convert template to regex pattern
-        $pattern = preg_quote($this->template, '/');
-        $pattern = str_replace('\{', '(?<', $pattern);
-        $pattern = str_replace('\}', '>[^/]+)', $pattern);
-        $pattern = '/^' . $pattern . '$/';
+        // Create a regex pattern from the template
+        $regexPattern = preg_quote($this->template, '/');
+        $regexPattern = preg_replace($pattern, '([^/]+)', $regexPattern);
+        $regexPattern = '/^' . $regexPattern . '$/'; // Anchor to start and end
 
-        // Extract parameters
-        if (preg_match($pattern, $uri, $matches)) {
-            foreach ($matches as $key => $value) {
-                if (is_string($key)) {
-                    $params[$key] = $value;
-                }
-            }
+        // Extract parameter names from the template
+        preg_match_all($pattern, $this->template, $matches);
+        $paramNames = $matches[1];
+
+        // Extract parameter values from the URI
+        if (preg_match($regexPattern, $uri, $matches)) {
+            array_shift($matches); // Remove the full match
+            $params = array_combine($paramNames, $matches);
         }
 
         return $params;
