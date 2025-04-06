@@ -38,88 +38,121 @@ $server = new McpServer($serverConfig);
  */
 
 // 添加基础计算工具
-$server->tool('add', function (array $params) {
-    try {
-        $a = is_numeric($params['a'] ?? null) ? (float) $params['a'] : 0;
-        $b = is_numeric($params['b'] ?? null) ? (float) $params['b'] : 0;
-        $result = $a + $b;
+$server->tool(
+    'add',
+    function (array $params) {
+        try {
+            $a = is_numeric($params['a'] ?? null) ? (float) $params['a'] : 0;
+            $b = is_numeric($params['b'] ?? null) ? (float) $params['b'] : 0;
+            $result = $a + $b;
 
-        return [
-            'content' => [
-                ['type' => 'text', 'text' => (string) $result],
+            return [
+                'content' => [
+                    ['type' => 'text', 'text' => (string) $result],
+                ],
+            ];
+        } catch (Throwable $e) {
+            return [
+                'content' => [
+                    ['type' => 'text', 'text' => '计算错误: ' . $e->getMessage()],
+                ],
+            ];
+        }
+    },
+    [
+        'description' => '将两个数字相加',
+        'inputSchema' => [
+            'type' => 'object',
+            'properties' => [
+                'a' => ['type' => 'number', 'description' => '第一个数字'],
+                'b' => ['type' => 'number', 'description' => '第二个数字'],
             ],
-        ];
-    } catch (Throwable $e) {
-        return [
-            'content' => [
-                ['type' => 'text', 'text' => '计算错误: ' . $e->getMessage()],
-            ],
-        ];
-    }
-}, '将两个数字相加', [
-    'a' => ['type' => 'number', 'description' => '第一个数字'],
-    'b' => ['type' => 'number', 'description' => '第二个数字'],
-]);
+            'required' => ['a', 'b'],
+        ],
+    ]
+);
 
 // 添加乘法工具
-$server->tool('multiply', function (array $params) {
-    try {
-        $a = is_numeric($params['a'] ?? null) ? (float) $params['a'] : 0;
-        $b = is_numeric($params['b'] ?? null) ? (float) $params['b'] : 0;
-        $result = $a * $b;
+$server->tool(
+    'multiply',
+    function (array $params) {
+        try {
+            $a = is_numeric($params['a'] ?? null) ? (float) $params['a'] : 0;
+            $b = is_numeric($params['b'] ?? null) ? (float) $params['b'] : 0;
+            $result = $a * $b;
 
-        return [
-            'content' => [
-                ['type' => 'text', 'text' => (string) $result],
+            return [
+                'content' => [
+                    ['type' => 'text', 'text' => (string) $result],
+                ],
+            ];
+        } catch (Throwable $e) {
+            return [
+                'content' => [
+                    ['type' => 'text', 'text' => '计算错误: ' . $e->getMessage()],
+                ],
+            ];
+        }
+    },
+    [
+        'description' => '将两个数字相乘',
+        'inputSchema' => [
+            'type' => 'object',
+            'properties' => [
+                'a' => ['type' => 'number', 'description' => '第一个数字'],
+                'b' => ['type' => 'number', 'description' => '第二个数字'],
             ],
-        ];
-    } catch (Throwable $e) {
-        return [
-            'content' => [
-                ['type' => 'text', 'text' => '计算错误: ' . $e->getMessage()],
-            ],
-        ];
-    }
-}, '将两个数字相乘', [
-    'a' => ['type' => 'number', 'description' => '第一个数字'],
-    'b' => ['type' => 'number', 'description' => '第二个数字'],
-]);
+            'required' => ['a', 'b'],
+        ],
+    ]
+);
 
 // 添加一个更复杂的字符串处理工具
-$server->tool('textProcess', function (array $params) {
-    $text = $params['text'] ?? '';
-    $operation = $params['operation'] ?? 'none';
+$server->tool(
+    'textProcess',
+    function (array $params) {
+        $text = $params['text'] ?? '';
+        $operation = $params['operation'] ?? 'none';
 
-    switch ($operation) {
-        case 'uppercase':
-            $result = strtoupper($text);
-            break;
-        case 'lowercase':
-            $result = strtolower($text);
-            break;
-        case 'capitalize':
-            $result = ucwords($text);
-            break;
-        case 'reverse':
-            $result = strrev($text);
-            break;
-        default:
-            $result = $text;
-    }
+        switch ($operation) {
+            case 'uppercase':
+                $result = strtoupper($text);
+                break;
+            case 'lowercase':
+                $result = strtolower($text);
+                break;
+            case 'capitalize':
+                $result = ucwords($text);
+                break;
+            case 'reverse':
+                $result = strrev($text);
+                break;
+            default:
+                $result = $text;
+        }
 
-    return [
-        'content' => [
-            ['type' => 'text', 'text' => $result],
+        return [
+            'content' => [
+                ['type' => 'text', 'text' => $result],
+            ],
+        ];
+    },
+    [
+        'description' => '处理文本字符串',
+        'inputSchema' => [
+            'type' => 'object',
+            'properties' => [
+                'text' => ['type' => 'string', 'description' => '要处理的文本'],
+                'operation' => [
+                    'type' => 'string',
+                    'description' => '要执行的操作',
+                    'enum' => ['uppercase', 'lowercase', 'capitalize', 'reverse', 'none'],
+                ],
+            ],
+            'required' => ['a', 'b', 'operation'],
         ],
-    ];
-}, '处理文本字符串', [
-    'text' => ['type' => 'string', 'description' => '要处理的文本'],
-    'operation' => [
-        'type' => 'string',
-        'description' => '要执行的操作',
-        'enum' => ['uppercase', 'lowercase', 'capitalize', 'reverse', 'none'],
-    ],
-]);
+    ]
+);
 
 /*
  * 资源示例部分

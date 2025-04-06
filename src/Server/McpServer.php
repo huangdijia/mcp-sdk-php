@@ -121,20 +121,21 @@ class McpServer extends Server
      * @param callable $handler the tool handler function
      * @return self for chaining
      */
-    public function tool(string $name, callable $handler, string $description = '', array $properties = []): self
+    public function tool(string $name, callable $handler, array $definition = []): self
     {
         $this->toolHandlers[$name] = $handler;
 
         // Ensure the tool definition has required properties
-        $this->toolDefinitions[$name] = [
+        $this->toolDefinitions[$name] = array_merge([
             'name' => $name,
-            'description' => $description,
+            'description' => '',
             'inputSchema' => [
                 'type' => 'object',
-                'properties' => $properties,
+                'properties' => [],
+                'required' => [],
                 '$schema' => 'http://json-schema.org/draft-07/schema#',
             ],
-        ];
+        ], $definition);
 
         $this->capabilities['tools'] ??= new stdClass();
 
@@ -166,16 +167,16 @@ class McpServer extends Server
      * @param callable $handler the prompt handler function
      * @return self for chaining
      */
-    public function prompt(string $name, callable $handler, string $description = '', array $arguments = []): self
+    public function prompt(string $name, callable $handler, array $definition = []): self
     {
         $this->promptHandlers[$name] = $handler;
 
         // Ensure the prompt definition has required properties
-        $this->promptDefinitions[$name] = [
+        $this->promptDefinitions[$name] = array_merge([
             'name' => $name,
-            'description' => $description,
-            'arguments' => $arguments,
-        ];
+            'description' => '',
+            'arguments' => [],
+        ], $definition);
 
         $this->capabilities['prompts'] ??= new stdClass();
 
