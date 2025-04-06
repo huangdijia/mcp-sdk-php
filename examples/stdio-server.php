@@ -67,7 +67,7 @@ $server->tool(
                 'a' => ['type' => 'number', 'description' => '第一个数字'],
                 'b' => ['type' => 'number', 'description' => '第二个数字'],
             ],
-            'required' => ['a', 'b'],
+            // 'required' => ['a', 'b'],
         ],
     ]
 );
@@ -102,7 +102,7 @@ $server->tool(
                 'a' => ['type' => 'number', 'description' => '第一个数字'],
                 'b' => ['type' => 'number', 'description' => '第二个数字'],
             ],
-            'required' => ['a', 'b'],
+            // 'required' => ['a', 'b'],
         ],
     ]
 );
@@ -149,7 +149,7 @@ $server->tool(
                     'enum' => ['uppercase', 'lowercase', 'capitalize', 'reverse', 'none'],
                 ],
             ],
-            'required' => ['a', 'b', 'operation'],
+            // 'required' => ['text', 'operation'],
         ],
     ]
 );
