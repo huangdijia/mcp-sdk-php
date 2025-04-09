@@ -68,22 +68,6 @@ class Server extends Protocol
     }
 
     /**
-     * Handle ping request from client.
-     *
-     * @param array $params the request parameters
-     * @return array the response
-     */
-    public function handlePing(array $params): array
-    {
-        if (! $this->initialized) {
-            throw new McpError('Server not initialized', Types::ERROR_CODE['ServerNotInitialized']);
-        }
-
-        // Return empty response
-        return [];
-    }
-
-    /**
      * Handle the initialize request from a client.
      *
      * @param array $params the initialization parameters
@@ -135,6 +119,22 @@ class Server extends Protocol
         if ($this->onInitialized) {
             call_user_func($this->onInitialized, $params);
         }
+    }
+
+    /**
+     * Handle ping request from client.
+     *
+     * @param array $params the request parameters
+     * @return array the response
+     */
+    public function handlePing(array $params): array
+    {
+        if (! $this->initialized) {
+            throw new McpError('Server not initialized', Types::ERROR_CODE['ServerNotInitialized']);
+        }
+
+        // Return empty response
+        return [];
     }
 
     /**
