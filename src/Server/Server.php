@@ -74,6 +74,10 @@ class Server extends Protocol
      */
     public function handlePing(array $params): array
     {
+        if (! $this->initialized) {
+            throw new McpError('Server not initialized', Types::ERROR_CODE['ServerNotInitialized']);
+        }
+
         // Return empty response
         return [];
     }
