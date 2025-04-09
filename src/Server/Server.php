@@ -132,7 +132,7 @@ class Server extends Protocol
         $this->initialized = true;
 
         if ($this->onInitialized) {
-            call_user_func($this->onInitialized);
+            call_user_func($this->onInitialized, $params);
         }
     }
 

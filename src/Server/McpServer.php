@@ -23,13 +23,6 @@ use Throwable;
 class McpServer extends Server
 {
     /**
-     * 服务器初始化完成后的回调.
-     *
-     * @var callable|null
-     */
-    public $onInitialized;
-
-    /**
      * 收到请求时的回调.
      *
      * @var callable|null
