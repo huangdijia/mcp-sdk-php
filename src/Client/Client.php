@@ -186,6 +186,32 @@ class Client extends Protocol
     }
 
     /**
+     * Get a prompt from the server.
+     *
+     * @param array $options request options
+     * @return array the subscription result
+     * @throws McpError if the request fails
+     */
+    public function getPrompt(string $name, array $options = []): array
+    {
+        return $this->request('getPrompt', [
+            'name' => $name,
+        ], $options);
+    }
+
+    /**
+     * List available prompts on the server.
+     *
+     * @param array $options request options
+     * @return array the list of prompts
+     * @throws McpError if the request fails
+     */
+    public function listPrompts(array $options = []): array
+    {
+        return $this->request('listPrompts', [], $options);
+    }
+
+    /**
      * Send a ping to the server to check if connection is alive.
      *
      * @param array $options request options
