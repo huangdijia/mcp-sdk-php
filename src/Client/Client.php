@@ -184,4 +184,21 @@ class Client extends Protocol
             'uri' => $uri,
         ], $options);
     }
+
+    /**
+     * Send a ping to the server to check if connection is alive.
+     *
+     * @param array $options request options
+     * @return bool whether the server responded successfully
+     */
+    public function ping(array $options = []): bool
+    {
+        try {
+            $result = $this->request('ping', [], $options);
+            return isset($result['pong']) && $result['pong'] === true;
+        } catch (McpError $e) {
+            $this->logger->debug('Ping failed', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
 }

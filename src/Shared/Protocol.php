@@ -16,6 +16,7 @@ use ModelContextProtocol\SDK\Exceptions\RequestCancelledError;
 use ModelContextProtocol\SDK\Types;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use stdClass;
 use Throwable;
 
 /**
@@ -485,7 +486,7 @@ abstract class Protocol
         $response = [
             'jsonrpc' => Types::JSONRPC_VERSION,
             'id' => $id,
-            'result' => $result,
+            'result' => empty($result) ? new stdClass() : $result,
         ];
 
         $this->transport->send(json_encode($response));

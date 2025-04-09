@@ -61,8 +61,23 @@ class Server extends Protocol
         $this->instructions = $options['instructions'] ?? null;
 
         // Set up initialization handlers
+        $this->setRequestHandler('ping', [$this, 'handlePing']);
         $this->setRequestHandler('initialize', [$this, 'handleInitialize']);
         $this->setNotificationHandler('initialized', [$this, 'handleInitialized']);
+    }
+
+    /**
+     * Handle ping request from client.
+     *
+     * @param array $params the request parameters
+     * @return array the response
+     */
+    public function handlePing(array $params): array
+    {
+        $this->logger->debug('Received ping from client');
+
+        // Return empty response
+        return [];
     }
 
     /**
