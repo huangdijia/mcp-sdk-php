@@ -255,11 +255,6 @@ echo "正在启动 MCP 服务器...\n";
 // 创建标准输入/输出传输层，禁用内部循环
 $transport = new StdioServerTransport(null, null, false);
 
-// 设置transport的onMessage回调来处理消息
-$transport->setOnMessage(function ($message) use ($server) {
-    $server->handleMessage($message);
-});
-
 // 连接服务器与传输层
 $server->connect($transport);
 
