@@ -76,9 +76,9 @@ class Server extends Protocol
      */
     public function handleInitialize(array $params): array
     {
-        if ($this->initialized) {
-            throw new McpError('Server already initialized', Types::ERROR_CODE['InvalidRequest']);
-        }
+        // if ($this->initialized) {
+        //     throw new McpError('Server already initialized', Types::ERROR_CODE['InvalidRequest']);
+        // }
 
         // Validate protocol version
         $protocolVersion = $params['protocolVersion'] ?? null;
