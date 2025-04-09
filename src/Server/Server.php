@@ -95,6 +95,7 @@ class Server extends Protocol
         $result = [
             'serverInfo' => $this->serverInfo,
             'capabilities' => $this->capabilities,
+            'protocolVersion' => $protocolVersion,
         ];
 
         if ($this->instructions !== null) {
