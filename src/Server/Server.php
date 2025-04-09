@@ -74,8 +74,6 @@ class Server extends Protocol
      */
     public function handlePing(array $params): array
     {
-        $this->logger->debug('Received ping from client');
-
         // Return empty response
         return [];
     }
