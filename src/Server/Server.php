@@ -62,8 +62,9 @@ class Server extends Protocol
 
         // Set up initialization handlers
         $this->setRequestHandler('initialize', [$this, 'handleInitialize']);
-        $this->setRequestHandler('ping', [$this, 'handlePing']);
         $this->setNotificationHandler('notifications/initialized', [$this, 'handleInitialized']);
+        // Set up ping handler
+        $this->setRequestHandler('ping', [$this, 'handlePing']);
     }
 
     /**
