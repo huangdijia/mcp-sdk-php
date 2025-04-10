@@ -14,6 +14,7 @@ namespace ModelContextProtocol\SDK\Client\Transport;
 use GuzzleHttp\Client as HttpClient;
 use GuzzleHttp\Exception\RequestException;
 use ModelContextProtocol\SDK\Shared\Transport;
+use Throwable;
 
 /**
  * Server-Sent Events (SSE) transport implementation for MCP clients.
@@ -33,7 +34,7 @@ use ModelContextProtocol\SDK\Shared\Transport;
  * }
  * ```
  */
-class SseClientTransport
+class SseClientTransport implements Transport
 {
     /**
      * @var callable|null callback for when a message is received
@@ -80,15 +81,40 @@ class SseClientTransport
     {
         $this->url = $url;
         $this->client = new HttpClient($options);
+
+        $this->start();
+    }
+
+    public function start(): void
+    {
         $this->active = true;
 
         // Start SSE connection
         try {
             $this->connect();
         } catch (RequestException $e) {
-            if ($this->onError) {
-                call_user_func($this->onError, $e);
-            }
+            $this->handleError($e);
+        }
+    }
+
+    public function handleMessage(string $message): void
+    {
+        if ($this->onMessage) {
+            call_user_func($this->onMessage, $message);
+        }
+    }
+
+    public function handleError(Throwable $error): void
+    {
+        if ($this->onError) {
+            call_user_func($this->onError, $error);
+        }
+    }
+
+    public function handleClose(): void
+    {
+        if ($this->onClose) {
+            call_user_func($this->onClose);
         }
     }
 
