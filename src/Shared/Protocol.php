@@ -94,7 +94,7 @@ abstract class Protocol
     public function disconnect(): void
     {
         if ($this->transport) {
-            $this->transport->close();
+            $this->transport->stop();
             $this->transport = null;
         }
     }
@@ -179,7 +179,7 @@ abstract class Protocol
             };
         }
 
-        $this->transport->send(json_encode($request));
+        $this->transport->writeMessage(json_encode($request));
 
         try {
             return $promise->wait();
@@ -209,7 +209,7 @@ abstract class Protocol
             'params' => $params,
         ];
 
-        $this->transport->send(json_encode($notification));
+        $this->transport->writeMessage(json_encode($notification));
     }
 
     /**
@@ -489,7 +489,7 @@ abstract class Protocol
             'result' => empty($result) ? new stdClass() : $result,
         ];
 
-        $this->transport->send(json_encode($response));
+        $this->transport->writeMessage(json_encode($response));
     }
 
     /**
@@ -520,7 +520,7 @@ abstract class Protocol
             $response['error']['data'] = $data;
         }
 
-        $this->transport->send(json_encode($response));
+        $this->transport->writeMessage(json_encode($response));
     }
 
     /**

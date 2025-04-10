@@ -225,7 +225,7 @@ class SseServerTransportTest extends TestCase
             $closeCalled = true;
         });
 
-        $transport->close();
+        $transport->stop();
 
         $this->assertTrue($closeCalled);
         // 验证 sseResponse 已被设置为 null
@@ -254,8 +254,8 @@ class SseServerTransportTest extends TestCase
         });
 
         // 调用 close 两次
-        $transport->close();
-        $transport->close();
+        $transport->stop();
+        $transport->stop();
 
         // onClose 回调应该只被调用一次
         $this->assertEquals(1, $closeCount);
@@ -274,7 +274,7 @@ class SseServerTransportTest extends TestCase
         $this->expectException(McpError::class);
         $this->expectExceptionMessage('Not connected');
 
-        $transport->send('test message');
+        $transport->writeMessage('test message');
     }
 
     /**

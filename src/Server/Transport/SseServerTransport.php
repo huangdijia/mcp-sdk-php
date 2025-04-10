@@ -148,7 +148,9 @@ class SseServerTransport implements Transport
                 );
             }
 
-            return $this->handleMessage($body);
+            $this->handleMessage($body);
+
+            return true;
         } catch (McpError $error) {
             http_response_code(400);
             echo $error->getMessage();
@@ -165,12 +167,11 @@ class SseServerTransport implements Transport
      * Handle a client message, regardless of how it arrived.
      *
      * @param string|null $message the raw message
-     * @return bool whether the message was successfully processed
      */
-    public function handleMessage(?string $message): bool
+    public function handleMessage(?string $message): void
     {
         if ($message === null) {
-            return false;
+            return;
         }
 
         try {
@@ -182,7 +183,6 @@ class SseServerTransport implements Transport
 
             http_response_code(202);
             echo 'Accepted';
-            return true;
         } catch (JsonException $e) {
             http_response_code(400);
             echo 'Invalid message: ' . $message;
@@ -191,7 +191,7 @@ class SseServerTransport implements Transport
                 call_user_func($this->onError, $e);
             }
 
-            return false;
+            return;
         }
     }
 
@@ -201,7 +201,7 @@ class SseServerTransport implements Transport
      * @param string $message the message to send
      * @throws McpError if not connected
      */
-    public function send(string $message): void
+    public function writeMessage(string $message): void
     {
         if ($this->sseResponse === null) {
             throw new McpError('Not connected', Types::ERROR_CODE['InternalError']);
@@ -211,14 +211,14 @@ class SseServerTransport implements Transport
         echo "data: {$message}\n\n";
 
         if (connection_status() !== CONNECTION_NORMAL) {
-            $this->close();
+            $this->stop();
         }
     }
 
     /**
      * Close the transport connection.
      */
-    public function close(): void
+    public function stop(): void
     {
         if ($this->sseResponse !== null) {
             $this->sseResponse = null;

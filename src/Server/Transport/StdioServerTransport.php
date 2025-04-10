@@ -65,8 +65,12 @@ class StdioServerTransport implements Transport
     {
         $this->input = $input ?? STDIN;
         $this->output = $output ?? STDOUT;
-        $this->active = true;
         $this->useInternalLoop = $useInternalLoop;
+    }
+
+    public function start(): void
+    {
+        $this->active = true;
 
         // Start reading from stdin if internal loop is enabled
         if ($this->useInternalLoop) {
@@ -79,16 +83,18 @@ class StdioServerTransport implements Transport
      *
      * @param string $message the message to send
      */
-    public function send(string $message): void
+    public function writeMessage(string $message): void
     {
-        fwrite($this->output, $message . "\n");
-        fflush($this->output);
+        if ($this->active) {
+            fwrite($this->output, $message . "\n");
+            fflush($this->output);
+        }
     }
 
     /**
      * Close the transport connection.
      */
-    public function close(): void
+    public function stop(): void
     {
         $this->active = false;
 

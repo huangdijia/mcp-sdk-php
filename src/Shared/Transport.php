@@ -17,16 +17,28 @@ namespace ModelContextProtocol\SDK\Shared;
 interface Transport
 {
     /**
+     * Start the transport connection.
+     */
+    public function start(): void;
+
+    /**
+     * Handle incoming messages from the transport.
+     *
+     * @param string $message the message to handle
+     */
+    public function handleMessage(string $message): void;
+
+    /**
      * Send a message through the transport.
      *
      * @param string $message the message to send
      */
-    public function send(string $message): void;
+    public function writeMessage(string $message): void;
 
     /**
      * Close the transport connection.
      */
-    public function close(): void;
+    public function stop(): void;
 
     /**
      * Set callback for when a message is received.
