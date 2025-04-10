@@ -137,7 +137,7 @@ class SseClientTransportTest extends TestCase
         });
 
         // Close the transport
-        $transport->stop();
+        $transport->close();
 
         // Assert that onclose was called
         $this->assertTrue($closeCalled);

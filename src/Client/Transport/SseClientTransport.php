@@ -120,7 +120,7 @@ class SseClientTransport
     /**
      * Close the transport connection.
      */
-    public function stop(): void
+    public function close(): void
     {
         $this->active = false;
 
