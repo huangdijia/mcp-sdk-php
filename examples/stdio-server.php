@@ -253,26 +253,9 @@ $server->onResponse = function (string $requestId, string $method) {
 echo "正在启动 MCP 服务器...\n";
 
 // 创建标准输入/输出传输层，禁用内部循环
-$transport = new StdioServerTransport(null, null, false);
+$transport = new StdioServerTransport(useInternalLoop: true);
 
 // 连接服务器与传输层
 $server->connect($transport);
 
 $transport->start();
-
-// 手动处理消息循环
-$input = STDIN;
-stream_set_blocking($input, false);
-
-// 保持运行直到传输层关闭
-while (true) {
-    // 读取输入
-    $line = fgets($input);
-    if ($line !== false && trim($line) !== '') {
-        // 将消息传递给transport的onMessage回调处理
-        $transport->handleMessage(trim($line));
-    }
-
-    // 休眠以避免高 CPU 使用率
-    usleep(10000); // 10ms
-}

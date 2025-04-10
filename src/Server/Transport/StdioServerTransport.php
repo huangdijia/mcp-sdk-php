@@ -98,11 +98,8 @@ class StdioServerTransport implements Transport
         // Start a loop to read from stdin
         while ($this->active) {
             $line = fgets($this->input);
-            if ($line !== false) {
-                $line = trim($line);
-                if ($line && $this->onMessage) {
-                    call_user_func($this->onMessage, $line);
-                }
+            if ($line !== false && $line !== '') {
+                $this->handleMessage(trim($line));
             }
 
             // Sleep a bit to avoid high CPU usage
