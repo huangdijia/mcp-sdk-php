@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace ModelContextProtocol\SDK\Shared;
 
+use Throwable;
+
 /**
  * Interface for transport layers used by the protocol.
  */
@@ -22,6 +24,11 @@ interface Transport
     public function start(): void;
 
     /**
+     * Close the transport connection.
+     */
+    public function close(): void;
+
+    /**
      * Handle incoming messages from the transport.
      *
      * @param string $message the message to handle
@@ -29,16 +36,21 @@ interface Transport
     public function handleMessage(string $message): void;
 
     /**
+     * Handle errors that occur during transport operations.
+     */
+    public function handleError(Throwable $error): void;
+
+    /**
+     * Handle the transport connection being closed.
+     */
+    public function handleClose(): void;
+
+    /**
      * Send a message through the transport.
      *
      * @param string $message the message to send
      */
     public function writeMessage(string $message): void;
-
-    /**
-     * Close the transport connection.
-     */
-    public function stop(): void;
 
     /**
      * Set callback for when a message is received.

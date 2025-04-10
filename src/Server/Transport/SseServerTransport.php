@@ -22,6 +22,8 @@ use ModelContextProtocol\SDK\Types;
  */
 class SseServerTransport implements Transport
 {
+    use Traits\InteractsWithCallbacks;
+
     /**
      * Maximum message size in bytes (4MB).
      *
@@ -40,27 +42,6 @@ class SseServerTransport implements Transport
      * Session ID for this transport.
      */
     private string $sessionId;
-
-    /**
-     * Callback for when a message is received.
-     *
-     * @var callable|null
-     */
-    private $onMessage;
-
-    /**
-     * Callback for when the connection is closed.
-     *
-     * @var callable|null
-     */
-    private $onClose;
-
-    /**
-     * Callback for when an error occurs.
-     *
-     * @var callable|null
-     */
-    private $onError;
 
     /**
      * Creates a new SSE server transport, which will direct the client to POST messages
@@ -211,14 +192,14 @@ class SseServerTransport implements Transport
         echo "data: {$message}\n\n";
 
         if (connection_status() !== CONNECTION_NORMAL) {
-            $this->stop();
+            $this->close();
         }
     }
 
     /**
      * Close the transport connection.
      */
-    public function stop(): void
+    public function close(): void
     {
         if ($this->sseResponse !== null) {
             $this->sseResponse = null;
@@ -227,36 +208,6 @@ class SseServerTransport implements Transport
                 call_user_func($this->onClose);
             }
         }
-    }
-
-    /**
-     * Set callback for when a message is received.
-     *
-     * @param callable $callback the callback function
-     */
-    public function setOnMessage(callable $callback): void
-    {
-        $this->onMessage = $callback;
-    }
-
-    /**
-     * Set callback for when the connection is closed.
-     *
-     * @param callable $callback the callback function
-     */
-    public function setOnClose(callable $callback): void
-    {
-        $this->onClose = $callback;
-    }
-
-    /**
-     * Set callback for when an error occurs.
-     *
-     * @param callable $callback the callback function
-     */
-    public function setOnError(callable $callback): void
-    {
-        $this->onError = $callback;
     }
 
     /**

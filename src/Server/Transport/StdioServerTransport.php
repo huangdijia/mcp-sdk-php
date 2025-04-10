@@ -12,13 +12,14 @@ declare(strict_types=1);
 namespace ModelContextProtocol\SDK\Server\Transport;
 
 use ModelContextProtocol\SDK\Shared\Transport;
-use Throwable;
 
 /**
  * STDIO transport implementation for MCP servers.
  */
 class StdioServerTransport implements Transport
 {
+    use Traits\InteractsWithCallbacks;
+
     /**
      * @var resource the input stream
      */
@@ -33,21 +34,6 @@ class StdioServerTransport implements Transport
      * @var bool whether the transport is active
      */
     private bool $active = false;
-
-    /**
-     * @var callable|null callback for when a message is received
-     */
-    private $onMessage;
-
-    /**
-     * @var callable|null callback for when the connection is closed
-     */
-    private $onClose;
-
-    /**
-     * @var callable|null callback for when an error occurs
-     */
-    private $onError;
 
     /**
      * @var bool whether the internal reading loop is enabled
@@ -94,67 +80,11 @@ class StdioServerTransport implements Transport
     /**
      * Close the transport connection.
      */
-    public function stop(): void
+    public function close(): void
     {
         $this->active = false;
 
-        if ($this->onClose) {
-            call_user_func($this->onClose);
-        }
-    }
-
-    /**
-     * Set callback for when a message is received.
-     *
-     * @param callable $callback the callback function
-     */
-    public function setOnMessage(callable $callback): void
-    {
-        $this->onMessage = $callback;
-    }
-
-    /**
-     * Set callback for when the connection is closed.
-     *
-     * @param callable $callback the callback function
-     */
-    public function setOnClose(callable $callback): void
-    {
-        $this->onClose = $callback;
-    }
-
-    /**
-     * Set callback for when an error occurs.
-     *
-     * @param callable $callback the callback function
-     */
-    public function setOnError(callable $callback): void
-    {
-        $this->onError = $callback;
-    }
-
-    /**
-     * Handle an error.
-     *
-     * @param Throwable $error the error
-     */
-    public function handleError(Throwable $error): void
-    {
-        if ($this->onError) {
-            call_user_func($this->onError, $error);
-        }
-    }
-
-    /**
-     * Handle an incoming message manually.
-     *
-     * @param string $message the message to handle
-     */
-    public function handleMessage(string $message): void
-    {
-        if ($this->onMessage) {
-            call_user_func($this->onMessage, $message);
-        }
+        $this->handleClose();
     }
 
     /**

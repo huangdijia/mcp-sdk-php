@@ -94,7 +94,7 @@ abstract class Protocol
     public function disconnect(): void
     {
         if ($this->transport) {
-            $this->transport->stop();
+            $this->transport->close();
             $this->transport = null;
         }
     }

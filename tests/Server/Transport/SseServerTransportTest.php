@@ -225,7 +225,7 @@ class SseServerTransportTest extends TestCase
             $closeCalled = true;
         });
 
-        $transport->stop();
+        $transport->close();
 
         $this->assertTrue($closeCalled);
         // 验证 sseResponse 已被设置为 null
@@ -254,8 +254,8 @@ class SseServerTransportTest extends TestCase
         });
 
         // 调用 close 两次
-        $transport->stop();
-        $transport->stop();
+        $transport->close();
+        $transport->close();
 
         // onClose 回调应该只被调用一次
         $this->assertEquals(1, $closeCount);
