@@ -274,7 +274,7 @@ class SseServerTransportTest extends TestCase
         $this->expectException(McpError::class);
         $this->expectExceptionMessage('Not connected');
 
-        $transport->send('test message');
+        $transport->writeMessage('test message');
     }
 
     /**

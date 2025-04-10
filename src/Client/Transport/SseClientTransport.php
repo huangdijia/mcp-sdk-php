@@ -33,7 +33,7 @@ use ModelContextProtocol\SDK\Shared\Transport;
  * }
  * ```
  */
-class SseClientTransport implements Transport
+class SseClientTransport
 {
     /**
      * @var callable|null callback for when a message is received
@@ -97,7 +97,7 @@ class SseClientTransport implements Transport
      *
      * @param string $message the message to send
      */
-    public function send(string $message): void
+    public function writeMessage(string $message): void
     {
         if (! $this->active) {
             return;

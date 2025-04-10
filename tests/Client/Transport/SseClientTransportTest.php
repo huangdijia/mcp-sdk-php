@@ -112,7 +112,7 @@ class SseClientTransportTest extends TestCase
 
         // Send a message
         $message = '{"type":"request","id":"123","method":"add","params":{"a":5,"b":3}}';
-        $transport->send($message);
+        $transport->writeMessage($message);
 
         // Assert that the request was made correctly
         $this->assertCount(1, $container);

@@ -22,6 +22,8 @@ use ModelContextProtocol\SDK\Types;
  */
 class SseServerTransport implements Transport
 {
+    use Traits\InteractsWithCallbacks;
+
     /**
      * Maximum message size in bytes (4MB).
      *
@@ -40,27 +42,6 @@ class SseServerTransport implements Transport
      * Session ID for this transport.
      */
     private string $sessionId;
-
-    /**
-     * Callback for when a message is received.
-     *
-     * @var callable|null
-     */
-    private $onMessage;
-
-    /**
-     * Callback for when the connection is closed.
-     *
-     * @var callable|null
-     */
-    private $onClose;
-
-    /**
-     * Callback for when an error occurs.
-     *
-     * @var callable|null
-     */
-    private $onError;
 
     /**
      * Creates a new SSE server transport, which will direct the client to POST messages
@@ -148,7 +129,9 @@ class SseServerTransport implements Transport
                 );
             }
 
-            return $this->handleMessage($body);
+            $this->handleMessage($body);
+
+            return true;
         } catch (McpError $error) {
             http_response_code(400);
             echo $error->getMessage();
@@ -165,12 +148,11 @@ class SseServerTransport implements Transport
      * Handle a client message, regardless of how it arrived.
      *
      * @param string|null $message the raw message
-     * @return bool whether the message was successfully processed
      */
-    public function handleMessage(?string $message): bool
+    public function handleMessage(?string $message): void
     {
         if ($message === null) {
-            return false;
+            return;
         }
 
         try {
@@ -182,7 +164,6 @@ class SseServerTransport implements Transport
 
             http_response_code(202);
             echo 'Accepted';
-            return true;
         } catch (JsonException $e) {
             http_response_code(400);
             echo 'Invalid message: ' . $message;
@@ -191,7 +172,7 @@ class SseServerTransport implements Transport
                 call_user_func($this->onError, $e);
             }
 
-            return false;
+            return;
         }
     }
 
@@ -201,7 +182,7 @@ class SseServerTransport implements Transport
      * @param string $message the message to send
      * @throws McpError if not connected
      */
-    public function send(string $message): void
+    public function writeMessage(string $message): void
     {
         if ($this->sseResponse === null) {
             throw new McpError('Not connected', Types::ERROR_CODE['InternalError']);
@@ -227,36 +208,6 @@ class SseServerTransport implements Transport
                 call_user_func($this->onClose);
             }
         }
-    }
-
-    /**
-     * Set callback for when a message is received.
-     *
-     * @param callable $callback the callback function
-     */
-    public function setOnMessage(callable $callback): void
-    {
-        $this->onMessage = $callback;
-    }
-
-    /**
-     * Set callback for when the connection is closed.
-     *
-     * @param callable $callback the callback function
-     */
-    public function setOnClose(callable $callback): void
-    {
-        $this->onClose = $callback;
-    }
-
-    /**
-     * Set callback for when an error occurs.
-     *
-     * @param callable $callback the callback function
-     */
-    public function setOnError(callable $callback): void
-    {
-        $this->onError = $callback;
     }
 
     /**

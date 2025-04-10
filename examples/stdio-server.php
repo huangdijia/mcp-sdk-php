@@ -258,6 +258,8 @@ $transport = new StdioServerTransport(null, null, false);
 // 连接服务器与传输层
 $server->connect($transport);
 
+$transport->start();
+
 // 手动处理消息循环
 $input = STDIN;
 stream_set_blocking($input, false);
