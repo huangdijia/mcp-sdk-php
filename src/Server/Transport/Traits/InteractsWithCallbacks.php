@@ -18,17 +18,17 @@ trait InteractsWithCallbacks
     /**
      * @var callable|null callback for when a message is received
      */
-    private $onMessage;
+    protected $onMessage;
 
     /**
      * @var callable|null callback for when the connection is closed
      */
-    private $onClose;
+    protected $onClose;
 
     /**
      * @var callable|null callback for when an error occurs
      */
-    private $onError;
+    protected $onError;
 
     /**
      * Set callback for when a message is received.
