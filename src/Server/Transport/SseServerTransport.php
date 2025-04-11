@@ -201,11 +201,9 @@ class SseServerTransport extends AbstractTransport
     {
         if ($this->sseResponse !== null) {
             $this->sseResponse = null;
-
-            if ($this->onClose) {
-                call_user_func($this->onClose);
-            }
         }
+
+        parent::close();
     }
 
     /**

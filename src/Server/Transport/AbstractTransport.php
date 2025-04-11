@@ -17,4 +17,9 @@ use ModelContextProtocol\SDK\Shared\Transport;
 abstract class AbstractTransport implements Transport
 {
     use InteractsWithCallbacks;
+
+    public function close(): void
+    {
+        $this->handleClose();
+    }
 }
