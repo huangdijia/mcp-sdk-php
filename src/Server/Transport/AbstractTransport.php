@@ -17,8 +17,4 @@ use ModelContextProtocol\SDK\Shared\Transport;
 abstract class AbstractTransport implements Transport
 {
     use InteractsWithCallbacks;
-
-    abstract public function writeMessage(string $message): void;
-
-    abstract public function close(): void;
 }
