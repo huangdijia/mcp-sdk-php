@@ -16,10 +16,8 @@ use ModelContextProtocol\SDK\Shared\Transport;
 /**
  * STDIO transport implementation for MCP servers.
  */
-class StdioServerTransport implements Transport
+class StdioServerTransport extends AbstractTransport
 {
-    use Traits\InteractsWithCallbacks;
-
     /**
      * @var resource the input stream
      */

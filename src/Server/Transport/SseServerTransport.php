@@ -20,10 +20,8 @@ use ModelContextProtocol\SDK\Types;
  * Server transport for SSE: this will send messages over an SSE connection
  * and receive messages from HTTP POST requests.
  */
-class SseServerTransport implements Transport
+class SseServerTransport extends AbstractTransport
 {
-    use Traits\InteractsWithCallbacks;
-
     /**
      * Maximum message size in bytes (4MB).
      *
