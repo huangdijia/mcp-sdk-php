@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace ModelContextProtocol\SDK\Exceptions;
 
 use Exception;
+use Throwable;
 
 /**
  * Base exception class for MCP errors.
@@ -19,21 +20,19 @@ use Exception;
 class McpError extends Exception
 {
     /**
-     * @var mixed additional error data
-     */
-    protected $data;
-
-    /**
      * Constructor.
      *
      * @param string $message the error message
      * @param int $code the error code
      * @param mixed $data additional error data
      */
-    public function __construct(string $message, int $code = 0, $data = null)
-    {
-        parent::__construct($message, $code);
-        $this->data = $data;
+    public function __construct(
+        string $message,
+        int $code = 0,
+        protected mixed $data = null,
+        ?Throwable $previous = null
+    ) {
+        parent::__construct($message, $code, $previous);
     }
 
     /**

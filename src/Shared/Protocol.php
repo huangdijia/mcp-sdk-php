@@ -14,9 +14,11 @@ namespace ModelContextProtocol\SDK\Shared;
 use ModelContextProtocol\SDK\Exceptions\McpError;
 use ModelContextProtocol\SDK\Exceptions\RequestCancelledError;
 use ModelContextProtocol\SDK\Types;
+use ModelContextProtocol\SDK\Types\Notification;
+use ModelContextProtocol\SDK\Types\Request;
+use ModelContextProtocol\SDK\Types\Response;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use stdClass;
 use Throwable;
 
 /**
@@ -231,25 +233,29 @@ abstract class Protocol
 
             // Handle response
             if (isset($data['id'], $data['result'])) {
-                $this->handleResponse($data);
+                $response = Response::fromArray($data);
+                $this->handleResponse($response);
                 return;
             }
 
             // Handle error response
             if (isset($data['id'], $data['error'])) {
+                // @TODO handle error response
                 $this->handleErrorResponse($data);
                 return;
             }
 
             // Handle request
             if (isset($data['id'], $data['method'])) {
-                $this->handleRequest($data);
+                $request = Request::fromArray($data);
+                $this->handleRequest($request);
                 return;
             }
 
             // Handle notification
             if (isset($data['method']) && ! isset($data['id'])) {
-                $this->handleNotification($data);
+                $notification = Notification::fromArray($data);
+                $this->handleNotification($notification);
                 return;
             }
 
@@ -333,11 +339,13 @@ abstract class Protocol
     /**
      * Handle a response message.
      *
-     * @param array $data the response data
+     * @param Response $response the response
      */
-    protected function handleResponse(array $data): void
+    protected function handleResponse(Response $response): void
     {
-        $id = $data['id'];
+        $id = $response->id;
+        $result = $response->result;
+
         if (! isset($this->pendingRequests[$id])) {
             $this->logger->warning('Received response for unknown request', ['id' => $id]);
             return;
@@ -351,7 +359,7 @@ abstract class Protocol
             $this->clearTimeout($pendingRequest['timeoutId']);
         }
 
-        $promise->resolve($data['result']);
+        $promise->resolve($result);
     }
 
     /**
@@ -386,40 +394,52 @@ abstract class Protocol
 
     /**
      * Handle a request message.
-     *
-     * @param array $data the request data
      */
-    protected function handleRequest(array $data): void
+    protected function handleRequest(Request $request): void
     {
-        $id = $data['id'];
-        $method = $data['method'];
-        $params = $data['params'] ?? [];
+        $id = $request->id;
+        $method = $request->method;
+        $params = $request->params ?? [];
 
         if (! isset($this->requestHandlers[$method])) {
-            $this->sendErrorResponse($id, 'Method not found', Types::ERROR_CODE['MethodNotFound']);
+            $exception = new McpError(
+                'Method not found',
+                Types::ERROR_CODE['MethodNotFound']
+            );
+            $response = $request->toResponse()->withThrowable($exception);
+            $this->sendResponse($response);
             return;
         }
 
         try {
             $handler = $this->requestHandlers[$method];
             $result = $handler($params);
+            $response = $request->toResponse()->withResult($result);
 
-            $this->sendResponse($id, $result);
+            $this->sendResponse($response);
+        } catch (McpError $e) {
+            $response = $request->toResponse()->withThrowable($e);
+            $this->sendResponse($response);
         } catch (Throwable $e) {
-            $errorCode = $e instanceof McpError ? $e->getCode() : Types::ERROR_CODE['InternalError'];
-            $this->sendErrorResponse($id, $e->getMessage(), $errorCode);
+            $exception = new McpError(
+                $e->getMessage(),
+                Types::ERROR_CODE['InternalError'],
+                previous: $e
+            );
+            $response = $request->toResponse()->withThrowable($exception);
+            $this->sendResponse($response);
         }
     }
 
     /**
      * Handle a notification message.
      *
-     * @param array $data the notification data
+     * @param Notification $notification the notification
      */
-    protected function handleNotification(array $data): void
+    protected function handleNotification(Notification $notification): void
     {
-        $method = $data['method'];
-        $params = $data['params'] ?? [];
+        $method = $notification->method;
+        $params = $notification->params ?? [];
 
         // Handle progress notifications
         if ($method === 'progress' && isset($params['token'])) {
@@ -473,21 +493,14 @@ abstract class Protocol
     /**
      * Send a response to a request.
      *
-     * @param int $id the request ID
-     * @param array $result the result data
+     * @param Response $response the response
      */
-    protected function sendResponse(int $id, array $result): void
+    protected function sendResponse(Response $response): void
     {
         if (! $this->transport) {
             $this->logger->error('Cannot send response: transport not connected');
             return;
         }
-
-        $response = [
-            'jsonrpc' => Types::JSONRPC_VERSION,
-            'id' => $id,
-            'result' => empty($result) ? new stdClass() : $result,
-        ];
 
         $this->transport->writeMessage(json_encode($response));
     }
@@ -495,29 +508,19 @@ abstract class Protocol
     /**
      * Send an error response to a request.
      *
-     * @param string $id the request ID
-     * @param string $message the error message
-     * @param int $code the error code
      * @param mixed $data additional error data
      */
-    protected function sendErrorResponse(string $id, string $message, int $code, $data = null): void
+    protected function sendErrorResponse(Response $response, Throwable $throwable, mixed $data = null): void
     {
         if (! $this->transport) {
             $this->logger->error('Cannot send error response: transport not connected');
             return;
         }
 
-        $response = [
-            'jsonrpc' => Types::JSONRPC_VERSION,
-            'id' => $id,
-            'error' => [
-                'code' => $code,
-                'message' => $message,
-            ],
-        ];
+        $response = $response->withThrowable($throwable);
 
         if ($data !== null) {
-            $response['error']['data'] = $data;
+            $response->error = $response->error->withData($data);
         }
 
         $this->transport->writeMessage(json_encode($response));

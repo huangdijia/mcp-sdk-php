@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace ModelContextProtocol\SDK\Types;
 
+use ModelContextProtocol\SDK\Types;
 use Psr\Http\Message\ServerRequestInterface;
 
 class Request implements McpModel
@@ -19,8 +20,16 @@ class Request implements McpModel
         public int|string $id,
         public string $method,
         public ?array $params = null,
-        public string $jsonrpc = '2.0',
+        public string $jsonrpc = Types::JSONRPC_VERSION,
     ) {
+    }
+
+    public function toResponse(): Response
+    {
+        return new Response(
+            id: $this->id,
+            jsonrpc: $this->jsonrpc,
+        );
     }
 
     public function jsonSerialize(): mixed
@@ -36,7 +45,7 @@ class Request implements McpModel
     public static function fromRequest(ServerRequestInterface $request): self
     {
         $body = $request->getBody()->getContents();
-        $data = json_decode($body, true);
+        $data = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
 
         return self::fromArray($data);
     }
@@ -48,5 +57,12 @@ class Request implements McpModel
             $data['method'] ?? '',
             $data['params'] ?? null,
         );
+    }
+
+    public static function fromJson(string $json): self
+    {
+        $data = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+
+        return self::fromArray($data);
     }
 }

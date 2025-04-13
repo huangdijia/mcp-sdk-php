@@ -11,14 +11,32 @@ declare(strict_types=1);
 
 namespace ModelContextProtocol\SDK\Types;
 
+use ModelContextProtocol\SDK\Types;
+use Throwable;
+
 class Response implements McpModel
 {
     public function __construct(
         public int|string $id,
         public ?array $result = null,
         public ?ErrorData $error = null,
-        public string $jsonrpc = '2.0',
+        public string $jsonrpc = Types::JSONRPC_VERSION,
     ) {
+    }
+
+    public function withResult(mixed $result): self
+    {
+        return new self($this->id, $result, $this->error, $this->jsonrpc);
+    }
+
+    public function withThrowable(Throwable $throwable): self
+    {
+        return $this->withError(ErrorData::fromThrowable($throwable));
+    }
+
+    public function withError(ErrorData $error): self
+    {
+        return new self($this->id, $this->result, $error, $this->jsonrpc);
     }
 
     public function jsonSerialize(): mixed
@@ -29,5 +47,14 @@ class Response implements McpModel
             'result' => $this->result,
             'error' => $this->error,
         ]);
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            $data['id'],
+            $data['result'] ?? null,
+            $data['error'] ?? null,
+        );
     }
 }

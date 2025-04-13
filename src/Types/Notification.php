@@ -11,12 +11,14 @@ declare(strict_types=1);
 
 namespace ModelContextProtocol\SDK\Types;
 
+use ModelContextProtocol\SDK\Types;
+
 class Notification implements McpModel
 {
     public function __construct(
         public string $method,
         public ?array $params = null,
-        public string $jsonrpc = '2.0',
+        public string $jsonrpc = Types::JSONRPC_VERSION,
     ) {
     }
 
@@ -27,5 +29,13 @@ class Notification implements McpModel
             'method' => $this->method,
             'params' => $this->params,
         ]);
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            $data['method'],
+            $data['params'] ?? null,
+        );
     }
 }
